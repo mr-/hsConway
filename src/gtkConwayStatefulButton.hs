@@ -25,18 +25,22 @@ main :: IO ()
 main= do
     initGUI
     window <- windowNew
-    hbox    <- hBoxNew False 10
-    button1 <- buttonNewWithLabel "Start"
+    table   <- tableNew 20 20 True
+    startButton <- buttonNewWithLabel "Start"
+    pauseButton <- buttonNewWithLabel "Pause"
 
-    set window [windowTitle := "Hello Cairo",
-                windowDefaultWidth := (wWidth + 10+50), windowDefaultHeight := (wHeight + 10),
-                containerBorderWidth := 5, containerChild := hbox ]
+    set window [windowTitle := "hsConway",
+                windowDefaultWidth := (wWidth + 10+100), windowDefaultHeight := (wHeight + 10),
+                containerBorderWidth := 5 ]
 --    window `on` focus $ \dirtype -> putStrLn "focused!" >> return False
     frame <- frameNew
-    containerAdd window frame
+    containerAdd window table
+
     canvas <- drawingAreaNew
-    boxPackStart hbox button1 PackNatural 0
-    boxPackStart hbox frame PackGrow 0
+
+    tableAttachDefaults table startButton 0 1 0 1
+    tableAttachDefaults table pauseButton 0 1 1 2
+    tableAttachDefaults table frame 1 20 0 20
 
     containerAdd frame canvas
     widgetModifyBg canvas StateNormal (Color 65535 65535 65535)
@@ -46,12 +50,13 @@ main= do
 
     curGridRef <- newIORef glider
 
+    let foo = timeoutAdd (  do curGrid <- readIORef curGridRef
+                               let newGrid = nextGen curGrid 
+                               renderWithDrawable drawin (mainloop (delta curGrid newGrid))
+                               writeIORef curGridRef newGrid
+                               return True) 300
 
-    onClicked button1 (timeoutAdd (      do curGrid <- readIORef curGridRef
-                                            let newGrid = nextGen curGrid 
-                                            renderWithDrawable drawin (mainloop (delta curGrid newGrid))
-                                            writeIORef curGridRef newGrid
-                                            return True) 300 >> return ())
+    onClicked startButton ( foo >>= (\x -> onClicked pauseButton (timeoutRemove x)) >> return ())
 
     onButtonPress canvas 
                 (\x -> do   let (a, b) = coordToCell (eventX x) (eventY x)
@@ -206,7 +211,7 @@ conc [] a = []
 gridList gr = conc (repeat nextGen) gr
 
 glider = stringToGrid
-   ["........................................",
+   ["#......................................#",
     "........................................",
     "........................................",
     "........................................",
@@ -241,8 +246,8 @@ glider = stringToGrid
     "........................................",
     "........................................",
     "........................................",
-    "........................................",
     ".....................................###",
     ".....................................#..",
     "......................................#.",
-    "........................................"]
+    "........................................",
+    "#......................................#"]
