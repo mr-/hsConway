@@ -77,10 +77,10 @@ main= do
 
 drawDelta :: GridDelta -> Render ()
 drawDelta gridDelta = 
-    forM_ (range $ bounds gridDelta) (\(x,y) -> case gridDelta ! (x,y) of 
-                                    Spawn -> drawCell x y
-                                    Kill  -> killCell x y
-                                    Keep  -> return () )
+    forM_ (assocs gridDelta) (\((x,y), cell) -> case cell of 
+                                        Spawn -> drawCell x y
+                                        Kill  -> killCell x y
+                                        Keep  -> return () )
     >> fill
 
 deltaGrid :: Grid -> Grid -> GridDelta
@@ -96,11 +96,10 @@ deltaGrid oldGrid newGrid = listArray c (map f (range c))
 -- mapArray a f = listArray c (map (\x -> f a x) (range c))
 
 swapGrid :: Int -> Int -> Grid -> Grid
-swapGrid x y gr = listArray c (map f (range c))
-            where c = bounds gr
-                  f (a,b) = if (x,y) == (a,b) then (n (gr ! (x,y))) else ((gr ! (a,b)))
-                  n Alive = Dead
-                  n Dead = Alive 
+swapGrid x y gr = gr // [((x, y), newCell)]
+            where newCell = invert ( gr ! (x,y) )
+                  invert Alive = Dead
+                  invert Dead = Alive 
 
 
 coordToCell :: Double -> Double -> (Int, Int)
@@ -123,7 +122,7 @@ drawCell x y = do
 
 drawGrid :: Grid -> Render ()
 drawGrid grid = 
-    forM_ (range $ bounds grid) (\(x,y) -> if grid ! (x,y) == Alive then drawCell x y else return ()) 
+    forM_ (assocs grid) (\((x,y), cell) -> if cell == Alive then drawCell x y else return ()) 
     >> fill
 
 killCell x y = do
