@@ -9,8 +9,8 @@ import Control.Monad.State
 import Data.IORef
 import Control.Concurrent as CC
 
-
 type Grid = UArray (Int,Int) Bool
+type GridDelta = UArray (Int,Int) Int
 
 wWidth = 500 
 wHeight = 500
@@ -40,27 +40,54 @@ main= do
     widgetShowAll window 
     drawin <- widgetGetDrawWindow canvas
 
-    xRef <- newIORef 1
-    timeoutAdd ( do x <- readIORef xRef 
-                    renderWithDrawable drawin (mainloop (gridList glider) x)
-                    modifyIORef xRef (+1)
-                    return True) 100
+    curGridRef <- newIORef glider
+
+    timeoutAdd ( do curGrid <- readIORef curGridRef
+                    let newGrid = nextGen curGrid 
+                    renderWithDrawable drawin (mainloop (delta curGrid newGrid))
+                    writeIORef curGridRef newGrid
+                    return True) 1000
 
     onButtonPress canvas 
-                (\x -> renderWithDrawable drawin (drawOnClick (eventX x) (eventY x)) >> return True)
+                (\x -> do   let (a, b) = coordToCell (eventX x) (eventY x)
+                            curGrid <- readIORef curGridRef
+                            let newGrid = swap a b curGrid
+                            writeIORef curGridRef newGrid
+                            renderWithDrawable drawin (mainloop (delta curGrid newGrid))
+                            return True)
 
---     onExpose canvas (\x -> do renderWithDrawable drawin drawField
---                               renderWithDrawable drawin (drawGrid glider)
---                               return True )
+    onExpose canvas (\x -> do renderWithDrawable drawin drawField
+                              curGrid <- readIORef curGridRef
+                              renderWithDrawable drawin (drawGrid curGrid)
+                              return True )
     
     onDestroy window mainQuit
     mainGUI
 
 
-mainloop gr i = do
-    reset
-    drawField
-    drawGrid (gr !! i)
+mainloop :: GridDelta -> Render ()
+mainloop gridDelta = do
+    let b = bounds gridDelta
+    forM_ (range b) (\(x,y) -> if gridDelta ! (x,y) == 2 then 
+                                    drawCell x y 
+                                else ( if gridDelta ! (x,y) == 1 then 
+                                    killCell x y 
+                                else return () ) )
+    fill
+
+delta :: Grid -> Grid -> GridDelta
+delta oldGrid newGrid = listArray c (map f (range c))
+            where c = bounds newGrid
+                  f (a,b) = if newGrid ! (a,b) == oldGrid ! (a,b) then 0 else ( if (oldGrid ! (a,b)) then 1 else 2) 
+
+-- 0 don't do anything
+-- 1 was alive - kill now
+-- 2 was dead - spawn
+
+swap :: Int -> Int -> Grid -> Grid
+swap x y gr = listArray c (map f (range c))
+            where c = bounds gr
+                  f (a,b) = if (x,y) == (a,b) then (not (gr ! (x,y))) else ((gr ! (a,b))) 
 
 
 coordToCell :: Double -> Double -> (Int, Int)
@@ -88,7 +115,7 @@ drawOnClick a b = do
 
 drawCell x y = do
     let (x',y') = centerCoords x y 
-    rectangle (( x')-10) (( y')-10) 20 20
+    rectangle (( x')-5) (( y')-5) 10 10
     setSourceRGBA 1 0 0 0.8
     fill
 
@@ -99,6 +126,11 @@ drawGrid grid = do
     mapM_ (\(x,y) -> if grid ! (x,y) == True then drawCell x y else return ()) (range b)
     fill
 
+killCell x y = do
+    let (x',y') = centerCoords x y 
+    rectangle (( x')-5) (( y')-5) 10 10
+    setSourceRGBA 1 1 1 1
+    fill
 
 drawField :: Render ()
 drawField = do
