@@ -52,7 +52,7 @@ main= do
 
     let foo = timeoutAdd (  do curGrid <- readIORef curGridRef
                                let newGrid = nextGen curGrid 
-                               renderWithDrawable drawin (mainloop (delta curGrid newGrid))
+                               renderWithDrawable drawin (drawDelta (deltaGrid curGrid newGrid))
                                writeIORef curGridRef newGrid
                                return True) 300
 
@@ -61,9 +61,9 @@ main= do
     onButtonPress canvas 
                 (\x -> do   let (a, b) = coordToCell (eventX x) (eventY x)
                             curGrid <- readIORef curGridRef
-                            let newGrid = swap a b curGrid
+                            let newGrid = swapGrid a b curGrid
                             writeIORef curGridRef newGrid
-                            renderWithDrawable drawin (mainloop (delta curGrid newGrid))
+                            renderWithDrawable drawin (drawDelta (deltaGrid curGrid newGrid))
                             return True)
 
     onExpose canvas (\x -> do renderWithDrawable drawin drawField
@@ -75,28 +75,28 @@ main= do
     mainGUI
 
 
-mainloop :: GridDelta -> Render ()
-mainloop gridDelta = do
-    let b = bounds gridDelta
-    forM_ (range b) (\(x,y) -> if gridDelta ! (x,y) == Spawn then 
-                                    drawCell x y 
-                                else ( if gridDelta ! (x,y) == Kill then 
-                                    killCell x y 
-                                else return () ) )
-    fill
+drawDelta :: GridDelta -> Render ()
+drawDelta gridDelta = 
+    forM_ (range $ bounds gridDelta) (\(x,y) -> case gridDelta ! (x,y) of 
+                                    Spawn -> drawCell x y
+                                    Kill  -> killCell x y
+                                    Keep  -> return () )
+    >> fill
 
-delta :: Grid -> Grid -> GridDelta
-delta oldGrid newGrid = listArray c (map f (range c))
+deltaGrid :: Grid -> Grid -> GridDelta
+deltaGrid oldGrid newGrid = listArray c (map f (range c))
             where c = bounds newGrid
-                  f (a,b) = if newGrid ! (a,b) == oldGrid ! (a,b) then Keep  else ( if (oldGrid ! (a,b)) == Alive then Kill else Spawn) 
+                  f (a,b) = same (oldGrid ! (a,b)) (newGrid ! (a,b)) 
+                  same Alive Alive = Keep
+                  same Dead Dead = Keep
+                  same Dead Alive = Spawn
+                  same Alive Dead = Kill
 
--- Stupid stupid hack...
--- 0 don't do anything
--- 1 was alive - kill now
--- 2 was dead - spawn
+-- mapArray :: Array a -> (Array a -> Index -> b) -> Array b
+-- mapArray a f = listArray c (map (\x -> f a x) (range c))
 
-swap :: Int -> Int -> Grid -> Grid
-swap x y gr = listArray c (map f (range c))
+swapGrid :: Int -> Int -> Grid -> Grid
+swapGrid x y gr = listArray c (map f (range c))
             where c = bounds gr
                   f (a,b) = if (x,y) == (a,b) then (n (gr ! (x,y))) else ((gr ! (a,b)))
                   n Alive = Dead
@@ -114,17 +114,6 @@ centerCoords a b = ( fromInteger $ floor $ nx,  fromInteger $ floor $ ny )
                nx =    ((toRational a)-1)*xdel + xdel/2
                ny =    ((toRational b) -1)*ydel + ydel/2 
 
-reset = do
-    rectangle 0 0 wWidth wHeight
-    setSourceRGBA 1 1 1 1
-    fill
-
-drawOnClick a b = do
-    let (a', b') = coordToCell a b
-    let (x,y) = centerCoords a' b'       
-    rectangle (( x)-15) (( y)-15) 30 30
-    setSourceRGBA 1 0 0 0.8
-    fill
 
 drawCell x y = do
     let (x',y') = centerCoords x y 
@@ -133,11 +122,9 @@ drawCell x y = do
     fill
 
 drawGrid :: Grid -> Render ()
-drawGrid grid = do
-    let b = bounds grid
-  --  drawCell 1 1
-    mapM_ (\(x,y) -> if grid ! (x,y) == Alive then drawCell x y else return ()) (range b)
-    fill
+drawGrid grid = 
+    forM_ (range $ bounds grid) (\(x,y) -> if grid ! (x,y) == Alive then drawCell x y else return ()) 
+    >> fill
 
 killCell x y = do
     let (x',y') = centerCoords x y 
