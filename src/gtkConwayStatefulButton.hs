@@ -10,16 +10,21 @@ import Control.Monad.State
 import Data.IORef
 import Control.Concurrent as CC
 
+
+
 data Cell = Dead | Alive deriving (Eq, Show)
 type Grid = Array (Int,Int) Cell
 
 data Delta = Kill | Spawn | Keep deriving (Eq, Show)
 type GridDelta = Array (Int,Int) Delta
 
-wWidth = 720 
-wHeight = 720
-height = 40
-width = 40
+data Universe = Universe {
+  uBounds :: (Int,Int),
+  uStates :: [Grid]
+}
+
+
+cellSize = 15
 
 main :: IO ()
 main= do
@@ -30,7 +35,7 @@ main= do
     pauseButton <- buttonNewWithLabel "Pause"
 
     set window [windowTitle := "hsConway",
-                windowDefaultWidth := (wWidth + 10+100), windowDefaultHeight := (wHeight + 10),
+                windowDefaultWidth := (300), windowDefaultHeight := (500 ),
                 containerBorderWidth := 5 ]
 --    window `on` focus $ \dirtype -> putStrLn "focused!" >> return False
     frame <- frameNew
@@ -49,7 +54,6 @@ main= do
     drawin <- widgetGetDrawWindow canvas
 
     curGridRef <- newIORef glider
-
     let foo = timeoutAdd (  do curGrid <- readIORef curGridRef
                                let newGrid = nextGen curGrid 
                                renderWithDrawable drawin (drawDelta (deltaGrid curGrid newGrid))
@@ -59,27 +63,31 @@ main= do
     onClicked startButton ( foo >>= (\x -> onClicked pauseButton (timeoutRemove x)) >> return ())
 
     onButtonPress canvas 
-                (\x -> do   let (a, b) = coordToCell (eventX x) (eventY x)
-                            curGrid <- readIORef curGridRef
+                (\x -> do   curGrid <- readIORef curGridRef
+                            let (a, b) = coordToCell  (eventX x) (eventY x)
                             let newGrid = swapGrid a b curGrid
                             writeIORef curGridRef newGrid
-                            renderWithDrawable drawin (drawDelta (deltaGrid curGrid newGrid))
+                            renderWithDrawable drawin (drawDelta(deltaGrid curGrid newGrid))
                             return True)
 
-    onExpose canvas (\x -> do renderWithDrawable drawin drawField
-                              curGrid <- readIORef curGridRef
+    onExpose canvas (\x -> do curGrid <- readIORef curGridRef
+                              let (width, height) = dim curGrid
+                              renderWithDrawable drawin (drawField width height)                              
                               renderWithDrawable drawin (drawGrid curGrid)
                               return True )
     
     onDestroy window mainQuit
     mainGUI
 
+dim :: Grid -> (Int, Int)
+dim gr = (w, h)
+      where ((a,b), (w,h)) = bounds gr
 
-drawDelta :: GridDelta -> Render ()
-drawDelta gridDelta = 
+drawDelta ::   GridDelta -> Render ()
+drawDelta  gridDelta = 
     forM_ (assocs gridDelta) (\((x,y), cell) -> case cell of 
-                                        Spawn -> drawCell x y
-                                        Kill  -> killCell x y
+                                        Spawn -> drawCell  x y
+                                        Kill  -> killCell  x y
                                         Keep  -> return () )
     >> fill
 
@@ -103,42 +111,42 @@ swapGrid x y gr = gr // [((x, y), newCell)]
 
 
 coordToCell :: Double -> Double -> (Int, Int)
-coordToCell x y = ( 1 + floor (x/(wWidth/width)), 1 + floor (y/(wHeight/height)) )
+coordToCell  x y = ( 1 + floor (x/cellSize), 
+  1 + floor (y/cellSize ))
 
 
 centerCoords :: Int -> Int -> (Double, Double)
-centerCoords a b = ( fromInteger $ floor $ nx,  fromInteger $ floor $ ny )
-        where  ydel =  wHeight/height
-               xdel =  wWidth/width
-               nx =    ((toRational a)-1)*xdel + xdel/2
-               ny =    ((toRational b) -1)*ydel + ydel/2 
+centerCoords a b = ( fromIntegral nx,  fromIntegral ny )
+        where nx = cellSize * a - div cellSize 2
+              ny = cellSize * b - div cellSize 2
 
 
 drawCell x y = do
-    let (x',y') = centerCoords x y 
+    let (x',y') = centerCoords  x y 
     rectangle (( x')-5) (( y')-5) 10 10
     setSourceRGBA 1 0 0 0.8
     fill
 
-drawGrid :: Grid -> Render ()
-drawGrid grid = 
-    forM_ (assocs grid) (\((x,y), cell) -> if cell == Alive then drawCell x y else return ()) 
-    >> fill
 
-killCell x y = do
-    let (x',y') = centerCoords x y 
+killCell  x y = do
+    let (x',y') = centerCoords  x y 
     rectangle (( x')-5) (( y')-5) 10 10
     setSourceRGBA 1 1 1 1
     fill
 
-drawField :: Render ()
-drawField = do
+drawGrid :: Grid -> Render ()
+drawGrid grid = 
+    forM_ (assocs grid) (\((x,y), cell) -> if cell == Alive then drawCell  x y else return ()) 
+    >> fill
+
+drawField :: Int -> Int -> Render ()
+drawField w h = do
     setSourceRGB 0 0 0
     setLineWidth 1
-    forM_ [1..height] $ \x -> do  moveTo 0 (x*wHeight/height)
-                                  lineTo wHeight (x*wHeight/height)
-    forM_ [1..width] $ \x -> do  moveTo (x*wWidth/width) 0 
-                                 lineTo (x*wWidth/width) wWidth
+    forM_ [1..h] $ \x -> do  moveTo 0 (fromIntegral $ x*cellSize)
+                             lineTo (fromIntegral $ h*cellSize) (fromIntegral $ x*cellSize)
+    forM_ [1..w] $ \x -> do  moveTo (fromIntegral $ x*cellSize) 0 
+                             lineTo (fromIntegral $ x*cellSize) (fromIntegral $ w*cellSize)
     stroke
 
 
@@ -197,43 +205,40 @@ conc [] a = []
 gridList gr = conc (repeat nextGen) gr
 
 glider = stringToGrid
-   ["#......................................#",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "..................###...................",
-    "..................#.#...................",
-    "...................#....................",
-    "...................#....................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    "........................................",
-    ".....................................###",
-    ".....................................#..",
-    "......................................#.",
-    "........................................",
-    "#......................................#"]
+   ["#...................................#",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    "..................###................",
+    "..................#.#................",
+    "...................#.................",
+    "...................#.................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    ".....................................",
+    "..................................###",
+    "..................................#..",
+    "...................................#.",
+    ".....................................",
+    "#...................................#"]
