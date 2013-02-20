@@ -24,12 +24,12 @@ type Universe = [Grid]
 
 
 cellSize = 15
-
+defaultSpeed = 300
 main :: IO ()
 main= do
     initGUI
     window <- windowNew
-    table   <- tableNew 20 20 True
+    table   <- tableNew 20 10 True
     startButton <- buttonNewWithLabel "Start"
     pauseButton <- buttonNewWithLabel "Pause"
     loadButton  <- buttonNewWithLabel "Load"
@@ -38,9 +38,14 @@ main= do
     nextButton  <- buttonNewWithLabel "<   Next   <"
     prevButton  <- buttonNewWithLabel "> Previous >"
 
+    adj1        <- adjustmentNew defaultSpeed 100 1000 100 100 1.0
+    vsc         <- hScaleNew adj1
+    scaleSetDigits vsc 0
+
+
     set window [windowTitle := "hsConway",
                 windowDefaultWidth := (300), windowDefaultHeight := (500 ),
-                containerBorderWidth := 5 ]
+                containerBorderWidth := 10 ]
 --    window `on` focus $ \dirtype -> putStrLn "focused!" >> return False
 
     containerAdd window table
@@ -55,6 +60,8 @@ main= do
 
     tableAttachDefaults table loadButton  0 1 5 6
     tableAttachDefaults table saveButton  1 2 5 6
+    tableAttachDefaults table vsc         0 2 7 8
+
 
     tableAttachDefaults table canvas 3 10 0 20
 
@@ -64,8 +71,13 @@ main= do
     drawin <- widgetGetDrawWindow canvas
 
     curGridRef <- newIORef [glider]
+    speedRef <- newIORef 300
 
-    onClicked startButton ( startButtonHandler  curGridRef drawin pauseButton )
+    onValueChanged adj1 $ do x <- adjustmentGetValue adj1 
+                             writeIORef speedRef x
+                             putStrLn $ show $ floor x  
+
+    onClicked startButton ( startButtonHandler  curGridRef drawin pauseButton speedRef )
     onClicked nextButton  ( nextButtonHandler   curGridRef drawin )
     onClicked prevButton  ( prevButtonHandler   curGridRef drawin )
 
@@ -122,9 +134,10 @@ inbounds grid  a b = a <= x && b <= y
 pauseButtonHandler timerID = timeoutRemove timerID
 
 
-startButtonHandler curGridRef drawin button =
-  do timerID <- timeoutAdd(   doDrawNextStep curGridRef drawin 
-                            >>    return True) 300
+startButtonHandler curGridRef drawin button speedRef =
+  do speed <- readIORef speedRef 
+     timerID <- timeoutAdd(   doDrawNextStep curGridRef drawin 
+                            >>    return True) (floor speed)
      onClicked button ( pauseButtonHandler  timerID )
      return ()
 
