@@ -1,8 +1,11 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
+import Data.Maybe (fromJust, isJust)
 
 import Graphics.UI.Gtk
 import Graphics.Rendering.Cairo
 import Graphics.UI.Gtk.Gdk.Events
+import Graphics.UI.Gtk.Selectors.FileChooser
+import Graphics.UI.Gtk
 
 import Data.Array
 import Data.List
@@ -33,7 +36,7 @@ main= do
     table   <- tableNew 20 20 True
     startButton <- buttonNewWithLabel "Start"
     pauseButton <- buttonNewWithLabel "Pause"
-
+    loadButton  <- buttonNewWithLabel "Load"
     set window [windowTitle := "hsConway",
                 windowDefaultWidth := (300), windowDefaultHeight := (500 ),
                 containerBorderWidth := 5 ]
@@ -45,6 +48,7 @@ main= do
 
     tableAttachDefaults table startButton 0 1 0 1
     tableAttachDefaults table pauseButton 0 1 1 2
+    tableAttachDefaults table loadButton  0 1 2 3
     tableAttachDefaults table frame 1 20 0 20
 
     containerAdd frame canvas
@@ -54,30 +58,73 @@ main= do
     drawin <- widgetGetDrawWindow canvas
 
     curGridRef <- newIORef glider
-    let foo = timeoutAdd (  do curGrid <- readIORef curGridRef
-                               let newGrid = nextGen curGrid 
-                               renderWithDrawable drawin (drawDelta (deltaGrid curGrid newGrid))
-                               writeIORef curGridRef newGrid
-                               return True) 300
 
-    onClicked startButton ( foo >>= (\x -> onClicked pauseButton (timeoutRemove x)) >> return ())
-
-    onButtonPress canvas 
-                (\x -> do   curGrid <- readIORef curGridRef
-                            let (a, b) = coordToCell  (eventX x) (eventY x)
-                            let newGrid = swapGrid a b curGrid
-                            writeIORef curGridRef newGrid
-                            renderWithDrawable drawin (drawDelta(deltaGrid curGrid newGrid))
-                            return True)
-
-    onExpose canvas (\x -> do curGrid <- readIORef curGridRef
-                              let (width, height) = dim curGrid
-                              renderWithDrawable drawin (drawField width height)                              
-                              renderWithDrawable drawin (drawGrid curGrid)
-                              return True )
+    onClicked startButton ( startButtonHandler drawin curGridRef pauseButton )
+    onClicked loadButton ( loadButtonHandler curGridRef drawin )
+    onButtonPress canvas (canvasClickHandler curGridRef drawin)
+    onExpose canvas (canvasExposeHandler curGridRef drawin)
     
     onDestroy window mainQuit
     mainGUI
+
+loadButtonHandler curGridRef drawin =
+  do file <- chooseFile Nothing "Select Universe" Nothing
+     unless (file == Nothing) (do contents <- readFile (fromJust file)
+                                  let grid = stringToGrid $ lines contents
+                                  putStrLn $ show grid     
+                                  writeIORef curGridRef grid
+                                  let (width, height) = dim grid
+                                  putStrLn $ show $ dim grid
+                                  drawWindowClear drawin
+                                  renderWithDrawable drawin (drawField width height)                              
+                                  renderWithDrawable drawin (drawGrid grid))
+
+
+canvasExposeHandler curGridRef drawin x = 
+  do  curGrid <- readIORef curGridRef
+      let (width, height) = dim curGrid
+      drawWindowClear drawin
+      renderWithDrawable drawin (drawField width height)                              
+      renderWithDrawable drawin (drawGrid curGrid)
+      return True
+
+
+canvasClickHandler curGridRef drawin event =
+  do  curGrid <- readIORef curGridRef
+      let (a, b) = coordToCell  (eventX event) (eventY event)
+      when   (inbounds curGrid a b) ( do let newGrid = swapGrid a b curGrid
+                                         writeIORef curGridRef newGrid
+                                         renderWithDrawable drawin (drawDelta(deltaGrid curGrid newGrid))
+                                    )
+      return True
+
+inbounds grid  a b = a <= x && b <= y 
+  where (x, y) = dim grid
+
+pauseButtonHandler timerID  = 
+  do timeoutRemove timerID
+
+
+startButtonHandler drawin curGridRef button =
+  do timerID <- timeoutAdd(do   curGrid <- readIORef curGridRef
+                                let newGrid = nextGen curGrid 
+                                renderWithDrawable drawin (drawDelta (deltaGrid curGrid newGrid))
+                                writeIORef curGridRef newGrid
+                                return True) 300
+     onClicked button ( pauseButtonHandler  timerID )
+     return ()
+
+
+
+
+buttonSwitch :: Button -> String -> String -> IO ()
+buttonSwitch b x y  = do
+  txt <- buttonGetLabel b
+  let newtxt = case txt of
+                 x -> y
+                 y -> x
+  buttonSetLabel b newtxt
+
 
 dim :: Grid -> (Int, Int)
 dim gr = (w, h)
@@ -143,10 +190,11 @@ drawField :: Int -> Int -> Render ()
 drawField w h = do
     setSourceRGB 0 0 0
     setLineWidth 1
+    moveTo 0 0
     forM_ [1..h] $ \x -> do  moveTo 0 (fromIntegral $ x*cellSize)
-                             lineTo (fromIntegral $ h*cellSize) (fromIntegral $ x*cellSize)
-    forM_ [1..w] $ \x -> do  moveTo (fromIntegral $ x*cellSize) 0 
-                             lineTo (fromIntegral $ x*cellSize) (fromIntegral $ w*cellSize)
+                             lineTo   (fromIntegral $ w*cellSize) (fromIntegral $ x*cellSize)
+    forM_ [1..w] $ \x -> do  moveTo   (fromIntegral $ x*cellSize) 0
+                             lineTo   (fromIntegral $ x*cellSize) (fromIntegral $ h*cellSize)
     stroke
 
 
@@ -242,3 +290,30 @@ glider = stringToGrid
     "...................................#.",
     ".....................................",
     "#...................................#"]
+
+
+chooseFile :: Maybe Window -> String -> Maybe FilePath -> IO (Maybe FilePath)
+chooseFile window prompt mbFolder = do
+    dialog <- fileChooserDialogNew
+                    (Just $ prompt)
+                    ( window)
+                FileChooserActionOpen
+                [("gtk-cancel"
+                ,ResponseCancel)
+                ,("gtk-open"
+                ,ResponseAccept)]
+    when (isJust mbFolder) $ fileChooserSetCurrentFolder dialog (fromJust mbFolder)  >> return ()
+    widgetShow dialog
+    response <- dialogRun dialog
+    case response of
+        ResponseAccept -> do
+            fn <- fileChooserGetFilename dialog
+            widgetDestroy dialog
+            return fn
+        ResponseCancel -> do
+            widgetDestroy dialog
+            return Nothing
+        ResponseDeleteEvent -> do
+            widgetDestroy dialog
+            return Nothing
+        _                   -> return Nothing
