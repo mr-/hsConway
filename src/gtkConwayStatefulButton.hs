@@ -38,7 +38,7 @@ main= do
     nextButton  <- buttonNewWithLabel "<   Next   <"
     prevButton  <- buttonNewWithLabel "> Previous >"
 
-    adj1        <- adjustmentNew defaultSpeed 100 1000 100 100 1.0
+    adj1        <- adjustmentNew defaultSpeed 10 800 100 100 1.0
     vsc         <- hScaleNew adj1
     scaleSetDigits vsc 0
 
@@ -75,7 +75,6 @@ main= do
 
     onValueChanged adj1 $ do x <- adjustmentGetValue adj1 
                              writeIORef speedRef x
-                             putStrLn $ show $ floor x  
 
     onClicked startButton ( startButtonHandler  curGridRef drawin pauseButton speedRef )
     onClicked nextButton  ( nextButtonHandler   curGridRef drawin )
@@ -257,6 +256,13 @@ neighbours grid x y = map (\x -> grid ! x ) ns
           ((x1,y1),(x2,y2)) = bounds grid
           inbounds (a,b)    = x1 <= a && a <= x2 && y1 <= b && b <= y2
 
+neighboursT grid x y = map (\x -> grid ! (f x) ) ns
+    where ns = [ (x', y') | x' <- [x-1, x, x+1], y' <- [y-1, y, y+1], not(x'==x && y' == y)]
+          ((x1,y1),(x2,y2)) = bounds grid
+          f (a, b) = ((c a x2), (c b y2))
+          c a bou | (a < 1)   = bou
+                  | (a > bou) = 1
+                  | otherwise = a
 
 neighbourCount :: Grid -> Int -> Int -> Int
 neighbourCount grid x y  = sum (map trans (neighbours grid x y))
