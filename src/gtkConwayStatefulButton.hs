@@ -22,6 +22,10 @@ type GridDelta = Array (Int,Int) Delta
 
 type Universe = [Grid]
 
+data World = World {
+  universe :: Universe,
+  timerID :: Maybe (IO HandlerId)
+}
 
 cellSize = 15
 defaultSpeed = 300
@@ -251,12 +255,12 @@ drawField w h = do
 
 
 neighbours :: Grid -> Int -> Int -> [Cell]
-neighbours grid x y = map (\x -> grid ! x ) ns
+neighboursB grid x y = map (\x -> grid ! x ) ns
     where ns = [ (x', y') | x' <- [x-1, x, x+1], y' <- [y-1, y, y+1], not(x'==x && y' == y), inbounds (x', y')]
           ((x1,y1),(x2,y2)) = bounds grid
           inbounds (a,b)    = x1 <= a && a <= x2 && y1 <= b && b <= y2
 
-neighboursT grid x y = map (\x -> grid ! (f x) ) ns
+neighbours grid x y = map (\x -> grid ! (f x) ) ns
     where ns = [ (x', y') | x' <- [x-1, x, x+1], y' <- [y-1, y, y+1], not(x'==x && y' == y)]
           ((x1,y1),(x2,y2)) = bounds grid
           f (a, b) = ((c a x2), (c b y2))
