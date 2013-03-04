@@ -22,11 +22,6 @@ type GridDelta = Array (Int,Int) Delta
 
 type Universe = [Grid]
 
-data World = World {
-  universe :: Universe,
-  timerID :: Maybe (IO HandlerId)
-}
-
 cellSize = 15
 defaultSpeed = 300
 main :: IO ()
@@ -50,7 +45,6 @@ main= do
     set window [windowTitle := "hsConway",
                 windowDefaultWidth := (300), windowDefaultHeight := (500 ),
                 containerBorderWidth := 10 ]
---    window `on` focus $ \dirtype -> putStrLn "focused!" >> return False
 
     containerAdd window table
 
@@ -80,6 +74,34 @@ main= do
     onValueChanged adj1 $ do x <- adjustmentGetValue adj1 
                              writeIORef speedRef x
 
+    isPressedRef <- newIORef False
+    history <- newIORef []
+    onButtonPress canvas 
+     (\e -> do { putStrLn "pressed";
+                 let (x, y) = coordToCell (eventX e) (eventY e)
+                 ;
+                 cellClickHandler curGridRef drawin x y; 
+                 modifyIORef history (pushUnique (x, y));
+                 writeIORef isPressedRef True;
+                 return True})
+    onButtonRelease canvas 
+     (\_ -> do { putStrLn "released"; 
+                writeIORef isPressedRef False;
+                hist <- readIORef history;
+                putStrLn $ show hist;
+                writeIORef history [];
+                return True})
+    onMotionNotify canvas True 
+     (\e -> do {  pressed <- readIORef isPressedRef;
+                  when (pressed == True) 
+                  (let (x, y) = coordToCell (eventX e) (eventY e) in
+                      do oldhist <- readIORef history                       
+                         modifyIORef history (pushUnique (x,y))
+                         when ((head oldhist) /= (x,y)) 
+                            (cellClickHandler curGridRef drawin x y >> return ())
+                   );
+                  return True} )
+
     onClicked startButton ( startButtonHandler  curGridRef drawin pauseButton speedRef )
     onClicked nextButton  ( nextButtonHandler   curGridRef drawin )
     onClicked prevButton  ( prevButtonHandler   curGridRef drawin )
@@ -87,12 +109,17 @@ main= do
     onClicked saveButton  ( saveButtonHandler   curGridRef drawin )
     onClicked loadButton  ( loadButtonHandler   curGridRef drawin )
 
-    onButtonPress canvas  ( canvasClickHandler  curGridRef drawin )
+    --onButtonPress canvas  ( canvasClickHandler  curGridRef drawin )
     onExpose canvas       ( canvasExposeHandler curGridRef drawin )
     
     onDestroy window mainQuit
     mainGUI
 
+pushUnique :: Eq a => a -> [a] -> [a]
+pushUnique a []     = [a]
+pushUnique a f@(x:xs) = case (x == a) of
+                        True  -> f
+                        False -> a:f
 
 saveButtonHandler curGridRef drawin =
   do file <- chooseSaveFile Nothing "Save Universe" Nothing
@@ -121,17 +148,26 @@ canvasExposeHandler curGridRef drawin x =
       renderWithDrawable drawin (drawGrid curGrid)
       return True
 
+cellClickHandler curGridRef drawin x y =
+  do  curGrid <- readState curGridRef
+      when  (inbounds curGrid x y) 
+            ( do let newGrid = swapGrid x y curGrid
+                 writeState curGridRef newGrid
+                 renderWithDrawable drawin (drawDelta(deltaGrid curGrid newGrid))
+            )
+      return True
 
 canvasClickHandler curGridRef drawin event =
   do  curGrid <- readState curGridRef
       let (a, b) = coordToCell  (eventX event) (eventY event)
-      when   (inbounds curGrid a b) ( do let newGrid = swapGrid a b curGrid
-                                         writeState curGridRef newGrid
-                                         renderWithDrawable drawin (drawDelta(deltaGrid curGrid newGrid))
-                                    )
+      when  (inbounds curGrid a b) 
+            ( do let newGrid = swapGrid a b curGrid
+                 writeState curGridRef newGrid
+                 renderWithDrawable drawin (drawDelta(deltaGrid curGrid newGrid))
+            )
       return True
 
-inbounds grid  a b = a <= x && b <= y 
+inbounds grid  a b =  1 <= a && 1 <= b && a <= x && b <= y 
   where (x, y) = dim grid
 
 pauseButtonHandler timerID = timeoutRemove timerID
