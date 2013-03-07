@@ -74,33 +74,7 @@ main= do
     onValueChanged adj1 $ do x <- adjustmentGetValue adj1 
                              writeIORef speedRef x
 
-    isPressedRef <- newIORef False
-    history <- newIORef []
-    onButtonPress canvas 
-     (\e -> do { putStrLn "pressed";
-                 let (x, y) = coordToCell (eventX e) (eventY e)
-                 ;
-                 cellClickHandler curGridRef drawin x y; 
-                 modifyIORef history (pushUnique (x, y));
-                 writeIORef isPressedRef True;
-                 return True})
-    onButtonRelease canvas 
-     (\_ -> do { putStrLn "released"; 
-                writeIORef isPressedRef False;
-                hist <- readIORef history;
-                putStrLn $ show hist;
-                writeIORef history [];
-                return True})
-    onMotionNotify canvas True 
-     (\e -> do {  pressed <- readIORef isPressedRef;
-                  when (pressed == True) 
-                  (let (x, y) = coordToCell (eventX e) (eventY e) in
-                      do oldhist <- readIORef history                       
-                         modifyIORef history (pushUnique (x,y))
-                         when ((head oldhist) /= (x,y)) 
-                            (cellClickHandler curGridRef drawin x y >> return ())
-                   );
-                  return True} )
+    foo curGridRef canvas
 
     onClicked startButton ( startButtonHandler  curGridRef drawin pauseButton speedRef )
     onClicked nextButton  ( nextButtonHandler   curGridRef drawin )
@@ -114,6 +88,33 @@ main= do
     
     onDestroy window mainQuit
     mainGUI
+
+foo curGridRef canvas = do
+  drawin <- widgetGetDrawWindow canvas
+  isPressedRef <- newIORef False
+  history <- newIORef []
+  onButtonPress canvas 
+     (\e -> do { writeIORef isPressedRef True;
+                 let (x, y) = coordToCell (eventX e) (eventY e)
+                 ;
+                 cellClickHandler curGridRef drawin x y; 
+                 modifyIORef history (pushUnique (x, y));
+                 return True})
+  onButtonRelease canvas 
+     (\_ -> do {writeIORef isPressedRef False;
+                writeIORef history [];
+                return True})
+  onMotionNotify canvas True 
+     (\e -> do {  pressed <- readIORef isPressedRef;
+                  when (pressed == True) 
+                  (let (x, y) = coordToCell (eventX e) (eventY e) in
+                      do oldhist <- readIORef history                       
+                         modifyIORef history (pushUnique (x,y))
+                         when ((head oldhist) /= (x,y)) 
+                            (cellClickHandler curGridRef drawin x y >> return ())
+                   );
+                  return True} )
+
 
 pushUnique :: Eq a => a -> [a] -> [a]
 pushUnique a []     = [a]
