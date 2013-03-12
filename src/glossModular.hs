@@ -20,18 +20,28 @@ bar = combAnim [ A (ft, kill   x y) |  x <- [1..21], y <- [1..21], x /= y, x /= 
 baz = cycle [foo, bar]
 
 main = do
-   animate ( InWindow "foo" (w,w) (wh, wh) ) black 
+   animate ( InWindow "foo" (w+10,w+10) (wh+5, wh+5) ) black 
       (\x -> anim (combConst (  animationList grid) border ) x)
 
 
 
 border = color white $ lineLoop $ rectanglePath  w w
-
+s1 = 2
+s2 = 4
 spawn x y time = color (redish (time^2)) $ translate (-wh) (-wh) $
-      translate (centerX x y) (centerY x y) (rectangleSolid (cellSize-1) (cellSize-1)) 
+      translate (centerX x y) (centerY x y) (thickCircle s1 s2)
 kill x y  time = color (redish (1-time)) $ translate (-wh) (-wh) $
-      translate (centerX x y) (centerY x y) (rectangleSolid (cellSize-1) (cellSize-1))
+      translate (centerX x y) (centerY x y) (thickCircle s1 s2)
 keepAlive x y  time = color red $ translate (-wh) (-wh) $
+      translate (centerX x y) (centerY x y) (thickCircle s1 s2)
+
+
+
+spawn'' x y time = color (redish (time^2)) $ translate (-wh) (-wh) $
+      translate (centerX x y) (centerY x y) (rectangleSolid (cellSize-1) (cellSize-1)) 
+kill'' x y  time = color (redish (1-time)) $ translate (-wh) (-wh) $
+      translate (centerX x y) (centerY x y) (rectangleSolid (cellSize-1) (cellSize-1))
+keepAlive'' x y  time = color red $ translate (-wh) (-wh) $
       translate (centerX x y) (centerY x y) (rectangleSolid (cellSize-1) (cellSize-1))
 
 spawn' x y time = color (redish (2*time)) $ translate (centerX x y) (centerY x y) (thickCircle 2 4 ) 
