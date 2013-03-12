@@ -6,28 +6,26 @@ import Control.Monad (forM_, when, unless, liftM)
 import Conway
 import Animation
 
+cellSize = 10
 
 
 
 
-alist = [A (ft, spawn 10 10),  A (ft, kill 10 10), A (ft, spawn 10 10), A (ft, kill 10 10),  A (ft, spawn 10 10), A (ft, kill 10 10), A (ft, spawn 10 10), A (ft, kill 10 10), A (ft, spawn 10 10), A (ft, kill 10 10), A (ft, spawn 10 10), A (ft, kill 10 10), A (ft, spawn 10 10), A (ft, kill 10 10), A (100000, \t -> blank)]
+
 main = do
   animate ( InWindow "foo" (220,220) (50, 50) ) black 
       (\x -> anim (combConst (animationList ) border) x)
 
 
-cell x y = color red $ translate ( x) ( y) (circle 4)
-foo grid  = translate (-100) (-100) $ pictures $  
-   (map (\((x,y),foo) -> cell (fst $ centerCoords x y) (snd $ centerCoords x y) ) $ 
-    filter (\((x,y), foo) -> foo == Alive) (assocs grid)) ++ [border]
 
 border = color white $ lineLoop $ rectanglePath  210 210
+
 spawn x y time = color (redish (2*time)) $ translate (-105) (-105) $
-      translate (centerX x y) (centerY x y) (rectangleSolid rs rs) 
+      translate (centerX x y) (centerY x y) (rectangleSolid cellSize cellSize) 
 kill x y  time = color (redish (1-2*time)) $ translate (-105) (-105) $
-      translate (centerX x y) (centerY x y) (rectangleSolid rs rs)
+      translate (centerX x y) (centerY x y) (rectangleSolid cellSize cellSize)
 keepAlive x y  time = color red $ translate (-105) (-105) $
-      translate (centerX x y) (centerY x y) (rectangleSolid rs rs)
+      translate (centerX x y) (centerY x y) (rectangleSolid cellSize cellSize)
 
 spawn' x y time = color (redish (2*time)) $ translate (centerX x y) (centerY x y) (thickCircle 2 4 ) 
 kill' x y  time = color (redish (1-2*time)) $ translate (centerX x y) (centerY x y) (thickCircle 2 4 )
@@ -37,8 +35,6 @@ keepDead x y time = blank
 redish t = makeColor (t) 0 0 1 
 
 
-cellSize = 10
-rs = cellSize
 
 centerCoords :: Int -> Int -> (Float,Float)
 centerCoords a b = ( fromIntegral nx,  fromIntegral ny )
