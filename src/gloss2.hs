@@ -1,3 +1,5 @@
+--compile with ghc  -O2 -threaded glossModular.hs -o gloss 
+
 {-# LANGUAGE NoMonomorphismRestriction, FlexibleInstances, TypeSynonymInstances#-}
 import Graphics.Gloss.Interface.Pure.Animate
 import Data.Array
