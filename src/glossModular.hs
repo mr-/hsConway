@@ -14,7 +14,7 @@ cellSize = 10
 
 main = do
   animate ( InWindow "foo" (220,220) (50, 50) ) black 
-      (\x -> anim (combConst (animationList ) border) x)
+      (\x -> anim (combConst (animationList grid3) border) x)
 
 
 
@@ -54,8 +54,8 @@ transf g = map tr (assocs g)
         tr ((x,y), KeepAlive) = A (ft, keepAlive x y)
 
 
-animationList ::  [Animation]
-animationList  = map (\g -> combAnim (transf g) ) (deltaGridList grid)
+--animationList ::  [Animation]
+animationList gr = map (\g -> combAnim (transf g) ) (deltaGridList gr)
 -- Slower if animationList depends on grid?
 
 
