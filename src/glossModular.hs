@@ -9,8 +9,7 @@ import Animation
 
 
 
-ft :: Float
-ft = 1
+
 alist = [A (ft, spawn 10 10),  A (ft, kill 10 10), A (ft, spawn 10 10), A (ft, kill 10 10),  A (ft, spawn 10 10), A (ft, kill 10 10), A (ft, spawn 10 10), A (ft, kill 10 10), A (ft, spawn 10 10), A (ft, kill 10 10), A (ft, spawn 10 10), A (ft, kill 10 10), A (ft, spawn 10 10), A (ft, kill 10 10), A (100000, \t -> blank)]
 main = do
   animate ( InWindow "foo" (220,220) (50, 50) ) black 
@@ -22,7 +21,6 @@ foo grid  = translate (-100) (-100) $ pictures $
    (map (\((x,y),foo) -> cell (fst $ centerCoords x y) (snd $ centerCoords x y) ) $ 
     filter (\((x,y), foo) -> foo == Alive) (assocs grid)) ++ [border]
 
-rs = 10
 border = color white $ lineLoop $ rectanglePath  210 210
 spawn x y time = color (redish (2*time)) $ translate (-105) (-105) $
       translate (centerX x y) (centerY x y) (rectangleSolid rs rs) 
@@ -40,6 +38,7 @@ redish t = makeColor (t) 0 0 1
 
 
 cellSize = 10
+rs = cellSize
 
 centerCoords :: Int -> Int -> (Float,Float)
 centerCoords a b = ( fromIntegral nx,  fromIntegral ny )
@@ -49,18 +48,19 @@ centerCoords a b = ( fromIntegral nx,  fromIntegral ny )
 centerX a b = fst $ centerCoords a b 
 centerY a b = snd $ centerCoords a b 
 
-
-transf :: GridDelta -> [(Float -> Picture)]
+ft :: Float
+ft = 1
+transf :: GridDelta -> [Animation]
 transf g = map tr (assocs g)
-  where tr ((x,y), Kill)      = kill  x y 
-        tr ((x,y), Spawn)     = spawn x y
-        tr ((x,y), KeepDead)  = keepDead x y
-        tr ((x,y), KeepAlive) = keepAlive x y
+  where tr ((x,y), Kill)      = A (ft, kill  x y) 
+        tr ((x,y), Spawn)     = A (ft, spawn x y)
+        tr ((x,y), KeepDead)  = A (ft, keepDead x y)
+        tr ((x,y), KeepAlive) = A (ft, keepAlive x y)
 
 
 animationList ::  [Animation]
-animationList  = map (\g -> A (ft, combine (transf g) ) ) (deltaGridList grid3)
--- Here do we really want to add the ft ?
+animationList  = map (\g -> combAnim (transf g) ) (deltaGridList grid)
+-- Slower if animationList depends on grid?
 
 
 grid3 = stringToGrid ["..........#..........", 
