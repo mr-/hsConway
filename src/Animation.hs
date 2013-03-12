@@ -16,10 +16,7 @@ combConst l pic = map tr l
 funcFromAnimation (A (x, f)) = f
 timeFromAnimation (A (x, f)) = x
 
-combAnim :: [Animation] -> Animation
-combAnim l = A (m, combine l')
-  where m  = maximum $ map timeFromAnimation l
-        l' = map funcFromAnimation l 
+
 
 anim :: [Animation] -> Float -> Picture
 anim l t  = a (t - start)
@@ -33,6 +30,11 @@ totalFromDur l = scanl calc ((0,s),abc) (tail l)
     where A (s, abc) = head l
           calc ( (startac, endac), fac) (A (ordur, for)) = ((endac, ordur + endac), for)
 
+
+combAnim :: [Animation] -> Animation
+combAnim l = A (m, combine l')
+  where m  = maximum $ map timeFromAnimation l
+        l' = map funcFromAnimation l 
 
 combine :: [(Float -> Picture)] -> Float -> Picture
 combine l t = pictures $ map (\a -> a t) l 
