@@ -25,7 +25,7 @@ deltaGrid oldGrid newGrid = listArray c (map f (range c))
                   same Alive Dead  = Kill
 
 gridList grid = iterate nextGen grid
-
+{-
 neighbours :: Grid -> Int -> Int -> [Cell]
 neighboursB grid x y = map (\x -> grid ! x ) ns
     where ns = [ (x', y') | x' <- [x-1, x, x+1], y' <- [y-1, y, y+1], not(x'==x && y' == y), inbounds (x', y')]
@@ -40,10 +40,23 @@ neighbours grid x y = map (\x -> grid ! (f x) ) ns
                   | (a > bou) = 1
                   | otherwise = a
 
+--neighbourCount grid x y  = sum (map trans (neighbours grid x y))
+--                    where trans Dead = 0
+--                          trans Alive  = 1
+-}
 neighbourCount :: Grid -> Int -> Int -> Int
-neighbourCount grid x y  = sum (map trans (neighbours grid x y))
-                    where trans Dead = 0
-                          trans Alive  = 1
+neighbourCount grid x y = sum $ map (\d -> trans (grid ! d) ) ns
+    where ns = [ (c x' x2, c y' y2) | x' <- [x-1, x, x+1], y' <- [y-1, y, y+1], not(x'==x && y' == y)]
+          ((x1,y1),(x2,y2)) = bounds grid
+          c a bou | (a < 1)   = bou
+                  | (a > bou) = 1
+                  | otherwise = a
+          trans Dead  = 0 :: Int
+          trans Alive = 1 :: Int
+
+
+dim :: Grid -> (Int, Int)
+dim = snd.bounds
 
 action :: Cell -> Int -> Cell
 action Alive nghc 
@@ -56,6 +69,10 @@ action Dead nghc
     | otherwise = Dead
 
 nextGen :: Grid -> Grid
+--nextGen gr = listArray b (map f (assocs gr))
+--  where b = bounds gr
+--        f ((x,y), v) = action v (neighbourCount gr x y )
+
 nextGen gr = listArray b (map f (range b))
                 where b = bounds gr
                       f (x,y) = action (gr ! (x,y)) (neighbourCount gr x y)
@@ -64,8 +81,7 @@ stringToGrid :: [String] -> Grid
 stringToGrid s = listArray ((1,1), (h, w)) $ linearize s -- (1,1) (1,2) (1,3) .. (2,1) ..
         where w = length (head s)
               h = length s
-              linearize s = concatMap f s
-              f         = map trans
+              linearize s = concat $ map (map trans) s
               trans '.' = Dead
               trans _   = Alive
 
