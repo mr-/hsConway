@@ -1,3 +1,7 @@
+-- ghc -prof -auto-all -o Main Main.hs
+-- ./Main +RTS -p
+
+
 {-# LANGUAGE NoMonomorphismRestriction, FlexibleInstances, TypeSynonymInstances#-}
 import Graphics.Gloss.Interface.Pure.Animate
 import Data.Array
