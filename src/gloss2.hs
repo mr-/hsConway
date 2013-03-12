@@ -23,10 +23,11 @@ border = translate 105 105 $ color white $ lineLoop $ rectanglePath  210 210
 foo grid  = translate (-100) (-100) $ pictures $  
    (map (\((x,y),foo) -> cell (fst $ centerCoords x y) (snd $ centerCoords x y) ) $ 
     filter (\((x,y), foo) -> foo == Alive) (assocs grid)) ++ [border]
+
 rs = 10
 spawn x y time = color (redish (2*time)) $ translate (centerX x y) (centerY x y) (rectangleSolid rs rs) 
 kill x y  time = color (redish (1-2*time)) $ translate (centerX x y) (centerY x y) (rectangleSolid rs rs)
-keepAlive x y  time = color blue $ translate (centerX x y) (centerY x y) (rectangleSolid rs rs)
+keepAlive x y  time = color red $ translate (centerX x y) (centerY x y) (rectangleSolid rs rs)
 
 spawn' x y time = color (redish (2*time)) $ translate (centerX x y) (centerY x y) (thickCircle 2 4 ) 
 kill' x y  time = color (redish (1-2*time)) $ translate (centerX x y) (centerY x y) (thickCircle 2 4 )
@@ -61,14 +62,7 @@ totalFromDur l = scanl calc ((0,s),abc) (tail l)
           calc ( (startac, endac), fac) (A (ordur, for)) = ((endac, ordur + endac), for)
 
 
-stringToGrid :: [String] -> Grid
-stringToGrid s = listArray ((1,1), (h, w)) $ linearize s -- (1,1) (1,2) (1,3) .. (2,1) ..
-        where w = length (head s)
-              h = length s
-              linearize s = concatMap f s
-              f         = map trans
-              trans '.' = Dead
-              trans _   = Alive
+
 
 cellSize = 10
 
@@ -92,7 +86,7 @@ combine :: [(Float -> Picture)] -> Float -> Picture
 combine l t = pictures $ map (\a -> a t) l 
 
 animationList :: [Animation]
-animationList = map (\g -> A (ft, combine (transf g) ) ) deltaGridList
+animationList = map (\g -> A (ft, combine (transf g) ) ) (deltaGridList grid)
 
 
 data Cell = Dead | Alive deriving (Eq, Show)
@@ -101,10 +95,10 @@ type Grid = Array (Int,Int) Cell
 data Delta = Kill | Spawn | KeepDead | KeepAlive deriving (Eq, Show)
 type GridDelta = Array (Int,Int) Delta
 
-deltaGridList = (deltaGrid emptyGrid (gridList !! 0)) : 
-  [(deltaGrid (gridList !! (n-1)) (gridList !! n)) | n <- [1..] ]
+deltaGridList grid = (deltaGrid (emptyGrid grid) ((gridList grid) !! 0)) : 
+  [(deltaGrid ((gridList grid) !! (n-1)) ((gridList grid) !! n)) | n <- [1..] ]
 
-emptyGrid = listArray c (map (\x -> Dead) (range c))
+emptyGrid grid = listArray c (map (\x -> Dead) (range c))
       where  c = bounds grid
 
 deltaGrid :: Grid -> Grid -> GridDelta
@@ -116,7 +110,7 @@ deltaGrid oldGrid newGrid = listArray c (map f (range c))
                   same Dead Alive  = Spawn
                   same Alive Dead  = Kill
 
-gridList = iterate nextGen grid
+gridList grid = iterate nextGen grid
 
 neighbours :: Grid -> Int -> Int -> [Cell]
 neighboursB grid x y = map (\x -> grid ! x ) ns
@@ -152,6 +146,14 @@ nextGen gr = listArray b (map f (range b))
                 where b = bounds gr
                       f (x,y) = action (gr ! (x,y)) (neighbourCount gr x y)
 
+stringToGrid :: [String] -> Grid
+stringToGrid s = listArray ((1,1), (h, w)) $ linearize s -- (1,1) (1,2) (1,3) .. (2,1) ..
+        where w = length (head s)
+              h = length s
+              linearize s = concatMap f s
+              f         = map trans
+              trans '.' = Dead
+              trans _   = Alive
 
 gridToString :: Grid -> [String]
 gridToString gr = map l [1..height]
@@ -191,7 +193,7 @@ grid3 = stringToGrid ["..........#..........",
                      "..........#..........",
                      "..........#..........",
                      "..........#.........."]
-grid2 = stringToGrid ["..........#..........", 
+grid = stringToGrid ["..........#..........", 
                      "..........#..........", 
                      "..........#..........", 
                      "..........#..........",
@@ -213,7 +215,7 @@ grid2 = stringToGrid ["..........#..........",
                      "..........#..........",
                      "..........#.........."]
 
-grid = stringToGrid ["....................", 
+grid2 = stringToGrid ["....................", 
                      ".....#..............", 
                      "....#...............", 
                      "....###.............",
