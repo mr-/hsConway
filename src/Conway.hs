@@ -26,8 +26,6 @@ deltaGrid oldGrid newGrid = listArray c (map f (range c))
 
 gridList grid = iterate nextGen grid
 
-arrayElements :: Grid -> [(Int,Int)] -> [Cell]
-arrayElements grid indices = map (grid !) indices
 
 neighbourCount grid x y = length $ filter (==Alive) $ neighbours grid x y 
 
@@ -41,6 +39,7 @@ neighbours grid x y = arrayElements grid ns
           wrap a bou | (a < 1)   = bou
                      | (a > bou) = 1
                      | otherwise = a
+          arrayElements grid indices = map (grid !) indices 
 
 
 dim :: Grid -> (Int, Int)
@@ -57,13 +56,10 @@ action Dead nghc
     | otherwise = Dead
 
 nextGen :: Grid -> Grid
---nextGen gr = listArray b (map f (assocs gr))
---  where b = bounds gr
---        f ((x,y), v) = action v (neighbourCount gr x y )
+nextGen gr = listArray b $ map f $ assocs gr
+  where b = bounds gr
+        f ((x,y), v) = action v (neighbourCount gr x y )
 
-nextGen gr = listArray b (map f (range b))
-                where b = bounds gr
-                      f (x,y) = action (gr ! (x,y)) (neighbourCount gr x y)
 
 stringToGrid :: [String] -> Grid
 stringToGrid s = listArray ((1,1), (h, w)) $ linearize s -- (1,1) (1,2) (1,3) .. (2,1) ..

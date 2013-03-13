@@ -12,13 +12,12 @@ import Conway
 import Control.Concurrent (threadDelay)
 main :: IO ()
 main = do
-   runStateT (forever $ foo) 0 >> return ()
+   runStateT (forever $ (foo >> (liftIO $ threadDelay 50000) )) 0 >> return ()
 
 foo :: StateT Int IO ()
 foo = do
    n <- get
    liftIO $ putStrLn $ unlines $ deltaToString $ (deltaGridList grid3) !! n
-   liftIO $ threadDelay 50000
    put (n+1)
 
 grid3 = stringToGrid ["..........#..........", 
