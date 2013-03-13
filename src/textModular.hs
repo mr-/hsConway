@@ -4,35 +4,22 @@
 
 
 {-# LANGUAGE NoMonomorphismRestriction, FlexibleInstances, TypeSynonymInstances#-}
-import Graphics.Gloss.Interface.Pure.Animate hiding (dim)
-import Data.Array
+
 import Data.List (unlines, lines, intersperse)
-import Control.Monad (forM_, when, unless, liftM)
+import Control.Monad (forM_, when, unless, liftM, forever)
+import Control.Monad.State
 import Conway
-import Animation
-
-cellSize = 10
-w = 610
-wh = 305
-
-foo = combAnim [ A (ft, spawn  x y) |  x <- [1..21], y <- [1..21], x /= y, x /= (21-y) ]
-bar = combAnim [ A (ft, kill   x y) |  x <- [1..21], y <- [1..21], x /= y, x /= (21-y)]
-baz = cycle [foo, bar]
-
+import Control.Concurrent (threadDelay)
+main :: IO ()
 main = do
-   runState foo 0
+   runStateT (forever $ foo) 0 >> return ()
 
-
+foo :: StateT Int IO ()
 foo = do
    n <- get
-   liftIO $ putStrLn $ unlines $ deltaToString $ (deltaGridList gr) !! n
+   liftIO $ putStrLn $ unlines $ deltaToString $ (deltaGridList grid3) !! n
+   liftIO $ threadDelay 50000
    put (n+1)
-
-
---animationList ::  [Animation]
-animationList gr = map (\g -> combAnim (transf g) ) (deltaGridList gr)
--- Slower if animationList depends on grid?
-
 
 grid3 = stringToGrid ["..........#..........", 
                      "..........#..........", 
@@ -119,24 +106,15 @@ grid = stringToGrid [
                      "..............................#.............................."
                      ]
 
-grid2 = stringToGrid ["....................", 
-                     ".....#..............", 
-                     "....#...............", 
-                     "....###.............",
-                     "....................",
-                     ".........#..........",
-                     "........#...........",
-                     "........###.........",
-                     "....................",
-                     "....................",
-                     "...............#....",
-                     "..............#.....",
-                     "..............###...",
-                     "....................",
-                     "....................",
-                     "....................",
-                     "....................",
-                     "....................",
-                     "....................",
-                     "...................."]
+grid2 = stringToGrid [
+                     "..........", 
+                     "..........", 
+                     "..........", 
+                     "..........",
+                     "..........",
+                     ".......#..",
+                     "......#...",
+                     "......###.",
+                     "..........",
+                     ".........."]
 

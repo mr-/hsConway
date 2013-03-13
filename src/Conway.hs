@@ -25,34 +25,22 @@ deltaGrid oldGrid newGrid = listArray c (map f (range c))
                   same Alive Dead  = Kill
 
 gridList grid = iterate nextGen grid
-{-
+
+arrayElements :: Grid -> [(Int,Int)] -> [Cell]
+arrayElements grid indices = map (grid !) indices
+
+neighbourCount grid x y = length $ filter (==Alive) $ neighbours grid x y 
+
+
 neighbours :: Grid -> Int -> Int -> [Cell]
-neighboursB grid x y = map (\x -> grid ! x ) ns
-    where ns = [ (x', y') | x' <- [x-1, x, x+1], y' <- [y-1, y, y+1], not(x'==x && y' == y), inbounds (x', y')]
+neighbours grid x y = arrayElements grid ns
+    where ns = [ (wrap (x+x') x2, wrap (y+y') y2) | x' <- [-1, 0, 1], 
+                                                    y' <- [-1, 0, 1], 
+                                                    not(x'==0 && y' == 0)]
           ((x1,y1),(x2,y2)) = bounds grid
-          inbounds (a,b)    = x1 <= a && a <= x2 && y1 <= b && b <= y2
-
-neighbours grid x y = map (\x -> grid ! (f x) ) ns
-    where ns = [ (x', y') | x' <- [x-1, x, x+1], y' <- [y-1, y, y+1], not(x'==x && y' == y)]
-          ((x1,y1),(x2,y2)) = bounds grid
-          f (a, b) = ((c a x2), (c b y2))
-          c a bou | (a < 1)   = bou
-                  | (a > bou) = 1
-                  | otherwise = a
-
---neighbourCount grid x y  = sum (map trans (neighbours grid x y))
---                    where trans Dead = 0
---                          trans Alive  = 1
--}
-neighbourCount :: Grid -> Int -> Int -> Int
-neighbourCount grid x y = sum $ map (\d -> trans (grid ! d) ) ns
-    where ns = [ (c x' x2, c y' y2) | x' <- [x-1, x, x+1], y' <- [y-1, y, y+1], not(x'==x && y' == y)]
-          ((x1,y1),(x2,y2)) = bounds grid
-          c a bou | (a < 1)   = bou
-                  | (a > bou) = 1
-                  | otherwise = a
-          trans Dead  = 0 :: Int
-          trans Alive = 1 :: Int
+          wrap a bou | (a < 1)   = bou
+                     | (a > bou) = 1
+                     | otherwise = a
 
 
 dim :: Grid -> (Int, Int)
