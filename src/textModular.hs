@@ -20,6 +20,14 @@ foo = do
    liftIO $ putStrLn $ unlines $ deltaToString $ (deltaGridList grid4) !! n
    put (n+1)
 
+
+grid5 = stringToGrid [
+                     ".....", 
+                     "..#..",
+                     "..#..",
+                     "..#..",
+                     "....."]
+
 grid3 = stringToGrid ["..........#..........", 
                      "..........#..........", 
                      "..........#..........", 
