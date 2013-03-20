@@ -10,34 +10,44 @@ import Data.List (unlines, lines, intersperse)
 import Control.Monad (forM_, when, unless, liftM)
 import Conway
 import Animation
+import System.Environment (getArgs)
 
 cellSize = 10
-w = 610
-wh = 305
+---w = 610
+--wh = 305
 
 foo = combAnim [ A (ft, spawn  x y) |  x <- [1..21], y <- [1..21], x /= y, x /= (21-y) ]
 bar = combAnim [ A (ft, kill   x y) |  x <- [1..21], y <- [1..21], x /= y, x /= (21-y)]
 baz = cycle [foo, bar]
 
 main = do
-   animate ( InWindow "foo" (w+10,w+10) (wh+5, wh+5) ) black 
-      (\x -> anim (combConst (  animationList grid) border ) x)
+   filename:_ <- getArgs
+   contents <- readFile (filename)
+   let g = stringToGrid $ lines contents
+   let (width, height) = dim g
+   let w = fromIntegral $ cellSize*width
+   let h = fromIntegral $ cellSize*height
+   let wh = floor $ (fromIntegral w)/2
+   let hh = floor $ (fromIntegral h)/2
+   animate ( InWindow "foo" (w+10,h+10) (w,h) ) black 
+      (\x -> anim (combConst (  animationList g) (border w h) ) x)
 
 
 
-border = color white $ lineLoop $ rectanglePath  w w
+border w h = translate (w/2) (h/2) $ color white $ lineLoop $ rectanglePath  w h
 s1 = 2
 s2 = 4
-spawn x y time = color (redish (time^2)) $ translate (-wh) (-wh) $
+spawn x y time = color (redish (time^2))  $
       translate (centerX x y) (centerY x y) (thickCircle s1 s2)
-kill x y  time = color (redish (1-time)) $ translate (-wh) (-wh) $
+kill x y  time = color (redish (1-time)) $ 
       translate (centerX x y) (centerY x y) (thickCircle s1 s2)
-keepAlive x y  time = color red $ translate (-wh) (-wh) $
+keepAlive x y  time = color red $ 
       translate (centerX x y) (centerY x y) (thickCircle s1 s2)
+keepDead x y time = blank
+redish t = makeColor (t) 0 0 1 
 
 
-
-spawn'' x y time = color (redish (time^2)) $ translate (-wh) (-wh) $
+{-spawn'' x y time = color (redish (time^2)) $ translate (-wh) (-wh) $
       translate (centerX x y) (centerY x y) (rectangleSolid (cellSize-1) (cellSize-1)) 
 kill'' x y  time = color (redish (1-time)) $ translate (-wh) (-wh) $
       translate (centerX x y) (centerY x y) (rectangleSolid (cellSize-1) (cellSize-1))
@@ -47,10 +57,8 @@ keepAlive'' x y  time = color red $ translate (-wh) (-wh) $
 spawn' x y time = color (redish (2*time)) $ translate (centerX x y) (centerY x y) (thickCircle 2 4 ) 
 kill' x y  time = color (redish (1-2*time)) $ translate (centerX x y) (centerY x y) (thickCircle 2 4 )
 keepAlive' x y  time = color red $ translate (centerX x y) (centerY x y) (thickCircle 2 4)
-keepDead x y time = blank
 
-redish t = makeColor (t) 0 0 1 
-
+-}
 
 
 centerCoords :: Int -> Int -> (Float,Float)
