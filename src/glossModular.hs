@@ -28,12 +28,18 @@ main = do
        h = fromIntegral $ cellSize*height
 
    animate ( InWindow "foo" (w+10,h+10) (w,h) ) black 
-      (\x -> anim (combConst (  animationList g) (border w h) ) x)
+      (\x -> anim ( trans (-w/2) (-h/2) $ combConst (  animationList g) (border w h) ) x)
 
-trans w h ani t = foo (translate w h ) ani t
+trans :: Float -> Float -> [Animation] -> [Animation]
+trans w h ani  = too (translate w h) ani 
 
-foo :: (Picture -> Picture) -> (Float -> Picture) -> Float -> Picture
-too f ani t = f (ani t) 
+to :: (Picture -> Picture) -> Animation -> Animation
+to tr an = A(x, \t -> tr (f t) )
+   where f = funcFromAnimation an 
+         x = timeFromAnimation an 
+
+too :: (Picture -> Picture) -> [Animation] -> [Animation]
+too tr an = map (to tr) an
 
 gliderFromFile filename = do content <- readFile filename 
                              return $ stringToGrid $ lines content
