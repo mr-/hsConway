@@ -22,17 +22,21 @@ baz = cycle [foo, bar]
 
 main = do
    filename:_ <- getArgs
-   contents <- readFile (filename)
-   let g = stringToGrid $ lines contents
+   g <- gliderFromFile filename
    let (width, height) = dim g
-   let w = fromIntegral $ cellSize*width
-   let h = fromIntegral $ cellSize*height
-   let wh = floor $ (fromIntegral w)/2
-   let hh = floor $ (fromIntegral h)/2
+       w = fromIntegral $ cellSize*width
+       h = fromIntegral $ cellSize*height
+
    animate ( InWindow "foo" (w+10,h+10) (w,h) ) black 
       (\x -> anim (combConst (  animationList g) (border w h) ) x)
 
+trans w h ani t = foo (translate w h ) ani t
 
+foo :: (Picture -> Picture) -> (Float -> Picture) -> Float -> Picture
+too f ani t = f (ani t) 
+
+gliderFromFile filename = do content <- readFile filename 
+                             return $ stringToGrid $ lines content
 
 border w h = translate (w/2) (h/2) $ color white $ lineLoop $ rectanglePath  w h
 s1 = 2
