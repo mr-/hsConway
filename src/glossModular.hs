@@ -6,8 +6,9 @@
 {-# LANGUAGE NoMonomorphismRestriction, FlexibleInstances, TypeSynonymInstances#-}
 import Graphics.Gloss.Interface.Pure.Animate hiding (dim)
 import Data.Array
+import Data.Maybe
 import Data.List (unlines, lines, intersperse)
-import Control.Monad (forM_, when, unless, liftM)
+import Control.Monad (forM_, when, unless, liftM,mplus)
 import Conway
 import Animation
 import System.Environment (getArgs)
@@ -20,9 +21,20 @@ foo = combAnim [ A (ft, spawn  x y) |  x <- [1..21], y <- [1..21], x /= y, x /= 
 bar = combAnim [ A (ft, kill   x y) |  x <- [1..21], y <- [1..21], x /= y, x /= (21-y)]
 baz = cycle [foo, bar]
 
+
+maybeFirstArg = do list <- getArgs 
+                   let z = bang list 
+                   return z
+      where bang  [] = Nothing
+            bang  (x:xs) = Just x
+
+gliderFromFile filename = do content <- readFile filename 
+                             return $ stringToGrid $ lines content
+
 main = do
-   filename:_ <- getArgs
-   g <- gliderFromFile filename
+   mFilename <- maybeFirstArg
+   let defaultfilename = Just "../universes/line.conway"
+   g <- gliderFromFile (fromJust $ mplus mFilename defaultfilename)
    let (width, height) = dim g
        w = fromIntegral $ cellSize*width
        h = fromIntegral $ cellSize*height
@@ -40,9 +52,6 @@ to tr an = A(x, \t -> tr (f t) )
 
 too :: (Picture -> Picture) -> [Animation] -> [Animation]
 too tr an = map (to tr) an
-
-gliderFromFile filename = do content <- readFile filename 
-                             return $ stringToGrid $ lines content
 
 border w h = translate (w/2) (h/2) $ color white $ lineLoop $ rectanglePath  w h
 s1 = 2
