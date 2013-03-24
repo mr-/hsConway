@@ -16,7 +16,13 @@ combConst l pic = map tr l
 funcFromAnimation (A (x, f)) = f
 timeFromAnimation (A (x, f)) = x
 
+transformAnimation :: (Picture -> Picture) -> Animation -> Animation
+transformAnimation tr an = A(x, \t -> tr (f t) )
+   where f = funcFromAnimation an 
+         x = timeFromAnimation an 
 
+transformAnimations :: (Picture -> Picture) -> [Animation] -> [Animation]
+transformAnimations tr an = map (transformAnimation tr) an
 
 anim :: [Animation] -> Float -> Picture
 anim l t  = a (t - start)

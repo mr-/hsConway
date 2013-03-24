@@ -43,15 +43,9 @@ main = do
       (\x -> anim ( trans (-w/2) (-h/2) $ combConst (  animationList g) (border w h) ) x)
 
 trans :: Float -> Float -> [Animation] -> [Animation]
-trans w h ani  = too (translate w h) ani 
+trans w h ani  = transformAnimations (translate w h) ani 
 
-to :: (Picture -> Picture) -> Animation -> Animation
-to tr an = A(x, \t -> tr (f t) )
-   where f = funcFromAnimation an 
-         x = timeFromAnimation an 
 
-too :: (Picture -> Picture) -> [Animation] -> [Animation]
-too tr an = map (to tr) an
 
 border w h = translate (w/2) (h/2) $ color white $ lineLoop $ rectanglePath  w h
 s1 = 2

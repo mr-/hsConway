@@ -86,3 +86,9 @@ deltaToString gr = map l [1..height]
               trans KeepAlive  = "#"
               trans Spawn = "#"
               trans Kill = "."
+
+swapGrid :: Int -> Int -> Grid -> Grid
+swapGrid x y gr = gr // [((x, y), newCell)]
+            where newCell = invert ( gr ! (x,y) )
+                  invert Alive = Dead
+                  invert Dead  = Alive 
