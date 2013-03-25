@@ -58,6 +58,26 @@ main= do
     onDestroy window mainQuit
     mainGUI
 
+defaultSpeed = 70
+startAnimation drawin animation  = do
+        timeRef <- newIORef (0)
+        isDoneRef <- newIORef True
+        timerID <- timeoutAdd( do time <- readIORef timeRef
+                                  isDone <- readIORef isDoneRef
+                                  when (isDone == False) $ do putStrLn "Uhoh.."
+                                  when (isDone == True) $ do
+                                    writeIORef isDoneRef False
+                                    drawWindowClear drawin
+                                    renderWithDrawable drawin (animation time)
+                                    modifyIORef timeRef (+0.1)
+                                    performGC
+                                    writeIORef isDoneRef True
+                                  return True ) ( defaultSpeed )
+        return timerID
+    
+
+
+
 maybeFirstArg = do list <- getArgs 
                    let z = bang list 
                    return z
@@ -97,17 +117,7 @@ keepAlive x y t = do
 keepDead x y t = return ()
 
 
-defaultSpeed = 50
-startAnimation drawin animation  = do
-        timeRef <- newIORef (0)
-        timerID <- timeoutAdd( do  time <- readIORef timeRef
-                                   drawWindowClear drawin
-                                   renderWithDrawable drawin (animation time)
-                                   modifyIORef timeRef (+0.1)
-                                   performGC
-                                   return True ) ( defaultSpeed )
-        return timerID
-    
+
 
 ft :: Double
 ft = 1
