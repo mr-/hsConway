@@ -6,8 +6,11 @@ import Graphics.UI.Gtk
 import Conway 
 import Data.Array
 import Data.IORef
-
-
+import Data.Maybe
+import Data.List (unlines, lines, intersperse)
+import Control.Monad (forM_, when, unless, liftM,mplus)
+import System.Environment (getArgs)
+import System.Mem
 
 type Universe = [Grid]
 
@@ -19,9 +22,14 @@ main= do
     table   <- tableNew 20 10 True
     startButton <- buttonNewWithLabel "Start"
     pauseButton <- buttonNewWithLabel "Pause"
-
+    mFilename <- maybeFirstArg
+    let defaultfilename = Just "../universes/line.conway"
+    g <- gliderFromFile (fromJust $ mplus mFilename defaultfilename)
+    let (width, height) = dim g
+        w = fromIntegral $ cellSize*width
+        h = fromIntegral $ cellSize*height
     set window [windowTitle := "hsConway",
-                windowDefaultWidth := (300), windowDefaultHeight := (500 ),
+                windowDefaultWidth := (w+100), windowDefaultHeight := (h ),
                 containerBorderWidth := 10 ]
 
     containerAdd window table
@@ -40,13 +48,26 @@ main= do
 
     drawin <- widgetGetDrawWindow canvas
 
-    onClicked startButton ( do  aniID <- startAnimation drawin (anim   (animationList grid3))
+
+
+    onClicked startButton ( do  aniID <- startAnimation drawin (anim   (animationList g))
                                 onClicked pauseButton ( timeoutRemove aniID)
                                 return ()
                           )
 
     onDestroy window mainQuit
     mainGUI
+
+maybeFirstArg = do list <- getArgs 
+                   let z = bang list 
+                   return z
+      where bang  [] = Nothing
+            bang  (x:xs) = Just x
+
+gliderFromFile filename = do content <- readFile filename 
+                             return $ stringToGrid $ lines content
+
+
 
 centerCoords :: Int -> Int -> (Double, Double)
 centerCoords a b = ( fromIntegral nx,  fromIntegral ny )
@@ -83,6 +104,7 @@ startAnimation drawin animation  = do
                                    drawWindowClear drawin
                                    renderWithDrawable drawin (animation time)
                                    modifyIORef timeRef (+0.1)
+                                   performGC
                                    return True ) ( defaultSpeed )
         return timerID
     
@@ -102,30 +124,6 @@ transf g = map tr $ filter kd (assocs g)
 --animationList ::  [Animation]
 animationList gr = map (\g -> combAnim (transf g) ) (deltaGridList gr)
 -- Slower if animationList depends on grid?
-
-
-grid3 = stringToGrid ["..........#..........", 
-                     "..........#..........", 
-                     "..........#..........", 
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#..........",
-                     "..........#.........."]
-
 
 
 data Animation = A (Double, Double -> Picture)
