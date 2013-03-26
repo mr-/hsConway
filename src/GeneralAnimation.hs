@@ -1,9 +1,8 @@
-{-# LANGUAGE DatatypeContexts #-}
 
 import Data.Monoid
 
 
-data (Monoid a) => (Dyna a) = Dyna (Float -> a)
+data  (Dyna a) = Dyna (Float -> a)
 
 instance (Monoid a) => Monoid (Dyna a) where
 	mempty  = mempty
