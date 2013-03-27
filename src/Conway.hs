@@ -1,5 +1,4 @@
 module Conway where
-import Graphics.Gloss.Interface.Pure.Animate
 import Data.Array
 import Data.List (unlines, lines, intersperse)
 
@@ -9,8 +8,20 @@ type Grid = Array (Int,Int) Cell
 data Delta = Kill | Spawn | KeepDead | KeepAlive deriving (Eq, Show)
 type GridDelta = Array (Int,Int) Delta
 
-deltaGridList grid = (deltaGrid (emptyGrid grid) ((gridList grid) !! 0)) : 
-  [(deltaGrid ((gridList grid) !! (n-1)) ((gridList grid) !! n)) | n <- [1..] ]
+
+
+
+deltaGridList grid = zipWith deltaGrid l1 l
+  where l = gridList grid
+        l1 = (emptyGrid grid):l
+
+--deltaGridList grid = (deltaGrid (emptyGrid grid) ((gridList grid) !! 0)) : 
+--  [(deltaGrid ((gridList grid) !! (n-1)) ((gridList grid) !! n)) | n <- [1..] ]
+
+--deltaGridList grid = deltaGridList' (gridList grid)
+--where deltaGridList' []        = []
+--      deltaGridList' (x:[])    = [deltaGrid (emptyGrid x) x]
+--      deltaGridList' (x:y:xs)  = (deltaGrid x y) : (deltaGridList' xs)
 
 emptyGrid grid = listArray c (map (\x -> Dead) (range c))
       where  c = bounds grid
