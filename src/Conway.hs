@@ -1,13 +1,17 @@
+{-# LANGUAGE NoMonomorphismRestriction, FlexibleInstances, TypeSynonymInstances#-}
+
 module Conway where
 import Data.Array
 import Data.List (unlines, lines, intersperse)
+
+
+
 
 data Cell = Dead | Alive deriving (Eq, Show)
 type Grid = Array (Int,Int) Cell
 
 data Delta = Kill | Spawn | KeepDead | KeepAlive deriving (Eq, Show)
 type GridDelta = Array (Int,Int) Delta
-
 
 
 
@@ -71,6 +75,12 @@ nextGen gr = listArray b $ map f $ assocs gr
   where b = bounds gr
         f ((x,y), v) = action v (neighbourCount gr x y )
 
+swapGrid :: Int -> Int -> Grid -> Grid
+swapGrid x y gr = gr // [((x, y), newCell)]
+            where newCell = invert ( gr ! (x,y) )
+                  invert Alive = Dead
+                  invert Dead  = Alive 
+
 
 stringToGrid :: [String] -> Grid
 stringToGrid s = listArray ((1,1), (h, w)) $ linearize s -- (1,1) (1,2) (1,3) .. (2,1) ..
@@ -80,6 +90,9 @@ stringToGrid s = listArray ((1,1), (h, w)) $ linearize s -- (1,1) (1,2) (1,3) ..
               trans '.' = Dead
               trans _   = Alive
 
+instance Show Grid where
+  show = unlines.gridToString
+
 gridToString :: Grid -> [String]
 gridToString gr = map l [1..height]
         where ((a,b), (height, width)) = bounds gr
@@ -87,6 +100,9 @@ gridToString gr = map l [1..height]
               gridLineString gr i = concatMap trans [ gr ! (i, x) | x <- [1..width]]
               trans Dead = "."
               trans Alive  = "#"
+
+instance Show GridDelta where
+  show = unlines.deltaToString
 
 deltaToString :: GridDelta -> [String]
 deltaToString gr = map l [1..height]
@@ -98,8 +114,4 @@ deltaToString gr = map l [1..height]
               trans Spawn = "#"
               trans Kill = "."
 
-swapGrid :: Int -> Int -> Grid -> Grid
-swapGrid x y gr = gr // [((x, y), newCell)]
-            where newCell = invert ( gr ! (x,y) )
-                  invert Alive = Dead
-                  invert Dead  = Alive 
+
