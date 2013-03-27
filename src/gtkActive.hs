@@ -1,4 +1,4 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE NoMonomorphismRestriction, FlexibleInstances #-}
 
 import Graphics.Rendering.Cairo
 
@@ -11,6 +11,11 @@ import Data.List (unlines, lines, intersperse, foldl')
 import Control.Monad (forM_, when, unless, liftM,mplus)
 import System.Environment (getArgs)
 import System.Mem
+import Data.Active
+import Data.Semigroup
+
+instance Semigroup (Render ()) where
+  (<>) = (>>)
 
 type Universe = [Grid]
 
@@ -50,7 +55,7 @@ main= do
 
 
 
-    onClicked startButton ( do  aniID <- startAnimation drawin (anim   (animationList g))
+    onClicked startButton ( do  aniID <- startAnimation drawin (runActive (animationList g))
                                 onClicked pauseButton ( timeoutRemove aniID)
                                 return ()
                           )
@@ -64,7 +69,7 @@ startAnimation drawin animation  = do
         timeRef <- newIORef (0)
         timerID <- timeoutAdd( do time <- readIORef timeRef
                                   drawWindowClear drawin
-                                  renderWithDrawable drawin ((animation time) >> fill)
+                                  renderWithDrawable drawin ((animation (toTime time)) >> fill)
                                   modifyIORef timeRef (+0.1)
                                   return True ) ( defaultSpeed )
         return timerID
@@ -114,23 +119,24 @@ keepDead x y t = return ()
 
 
 
-ft :: Double
+--ft :: Double
 ft = 1
-transf :: GridDelta -> [Animation]
+--transf :: GridDelta -> [Animation]
 transf g = map tr $ filter kd (assocs g)
-  where tr ((x,y), Kill)      = A (ft, kill  x y) 
-        tr ((x,y), Spawn)     = A (ft, spawn x y)
-        tr ((x,y), KeepDead)  = A (ft, keepDead x y)
-        tr ((x,y), KeepAlive) = A (ft, keepAlive x y)
+  where tr ((x,y), Kill)      = mkActive 0 1 (kill  x y) 
+        tr ((x,y), Spawn)     = mkActive 0 1 (spawn x y)
+        tr ((x,y), KeepDead)  = mkActive 0 1 (keepDead x y)
+        tr ((x,y), KeepAlive) = mkActive 0 1 (keepAlive x y)
         kd ((x,y), KeepDead) = False
         kd _ = True
 
 
 --animationList ::  [Animation]
-animationList gr = map (\g -> combAnim (transf g) ) (deltaGridList gr)
+animationList gr = 
+  map (\g -> foldl (<>) (mkActive 0 0 (\t -> return ()) (transf g) ) ) (deltaGridList gr)
 -- Slower if animationList depends on grid?
 
-
+{-
 data Animation = A (Double, Double -> Picture)
 type Picture = Render ()
 instance Show Animation where
@@ -171,5 +177,4 @@ combAnim l = A (m, combine l')
 
 combine :: [(Double -> Picture)] -> Double -> Picture
 combine l t = foldl' (>>) (return ()) (map (\x -> x t) l)
-
- 
+-}
