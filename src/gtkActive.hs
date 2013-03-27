@@ -1,5 +1,8 @@
 {-# LANGUAGE NoMonomorphismRestriction, FlexibleInstances #-}
 
+--implement movie lazily
+
+
 import Graphics.Rendering.Cairo
 
 import Graphics.UI.Gtk
@@ -55,7 +58,7 @@ main= do
 
 
 
-    onClicked startButton ( do  aniID <- startAnimation drawin (runActive (animationList g))
+    onClicked startButton ( do  aniID <- startAnimation drawin (runActive $ movie (take 100 (animationList g)))
                                 onClicked pauseButton ( timeoutRemove aniID)
                                 return ()
                           )
@@ -67,8 +70,10 @@ main= do
 defaultSpeed = 100
 startAnimation drawin animation  = do
         timeRef <- newIORef (0)
+        putStrLn "Started Animation"
         timerID <- timeoutAdd( do time <- readIORef timeRef
                                   drawWindowClear drawin
+                                  putStrLn $ show time
                                   renderWithDrawable drawin ((animation (toTime time)) >> fill)
                                   modifyIORef timeRef (+0.1)
                                   return True ) ( defaultSpeed )
@@ -96,19 +101,19 @@ centerCoords a b = ( fromIntegral nx,  fromIntegral ny )
 
 cell rx ry = rectangle (rx - (cellSize/2)) (ry -(cellSize/2))  (cellSize) (cellSize)
 redish t = setSourceRGBA t 0 0 0.8
-spawn :: Int -> Int -> Double -> Render ()
+--spawn :: Int -> Int -> Double -> Render ()
 spawn x y t = do
     let (rx, ry) = centerCoords x y 
     cell rx ry
-    redish t
+    redish $ fromTime t
     fill
-kill :: Int -> Int -> Double -> Render ()
+--kill :: Int -> Int -> Double -> Render ()
 kill x y t = do
     let (rx, ry) = centerCoords x y 
     cell rx ry
-    redish (1-t)
+    redish (1 - (fromTime t))
     fill
-keepAlive :: Int -> Int -> Double -> Render ()
+--keepAlive :: Int -> Int -> Double -> Render ()
 keepAlive x y t = do
     let (rx, ry) = centerCoords x y 
     cell rx ry
@@ -121,19 +126,21 @@ keepDead x y t = return ()
 
 --ft :: Double
 ft = 1
+z = toTime 0
+o = toTime 1
 --transf :: GridDelta -> [Animation]
 transf g = map tr $ filter kd (assocs g)
-  where tr ((x,y), Kill)      = mkActive 0 1 (kill  x y) 
-        tr ((x,y), Spawn)     = mkActive 0 1 (spawn x y)
-        tr ((x,y), KeepDead)  = mkActive 0 1 (keepDead x y)
-        tr ((x,y), KeepAlive) = mkActive 0 1 (keepAlive x y)
+  where tr ((x,y), Kill)      = mkActive z o (kill  x y) 
+        tr ((x,y), Spawn)     = mkActive z o (spawn x y)
+        tr ((x,y), KeepDead)  = mkActive z o (keepDead x y)
+        tr ((x,y), KeepAlive) = mkActive z o (keepAlive x y)
         kd ((x,y), KeepDead) = False
         kd _ = True
 
 
 --animationList ::  [Animation]
 animationList gr = 
-  map (\g -> foldl (<>) (mkActive 0 0 (\t -> return ()) (transf g) ) ) (deltaGridList gr)
+  map (\g -> foldl (<>) (mkActive 0 0 (\t -> return ())) (transf g) ) (deltaGridList gr)
 -- Slower if animationList depends on grid?
 
 {-
