@@ -58,7 +58,7 @@ main= do
 
 
 
-    onClicked startButton ( do  aniID <- startAnimation drawin (runActive $ movie (take 100 (animationList g)))
+    onClicked startButton ( do  aniID <- startAnimation drawin (runActive $ movie (take 50 (animationList g)))
                                 onClicked pauseButton ( timeoutRemove aniID)
                                 return ()
                           )
