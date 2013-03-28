@@ -31,8 +31,9 @@ combine = foldl1 (<>)
 
 
 anim :: (Semigroup a, Ord t, Num t) => [Dynamic t a] -> t -> a
-anim l t = (runDynamic func) t
+anim l t = (runDynamic func) (t - (duration func) + stime)
     where func = find' t startTimed 
+          stime = duration (head l)
           startTimed = scanl1 addTimes l
           addTimes a b = Dynamic ((duration a) + (duration b)) (runDynamic b)
           find' t li = head $ dropWhile (\x -> ( duration x )<= t) li

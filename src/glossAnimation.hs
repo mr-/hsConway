@@ -14,7 +14,7 @@ import GeneralAnimation
 import System.Environment (getArgs)
 import Data.Semigroup
 
-
+type Animation = Dynamic Float Picture
 instance Semigroup Picture where
     a <> b = pictures [a, b]
 
@@ -39,14 +39,14 @@ main = do
        h = fromIntegral $ cellSize*height
 
    animate ( InWindow "foo" (w+10,h+10) (w,h) ) black 
-      (\x -> anim ((combConst (animationList g) (border w h)) ) x)
+      (\x -> anim ( trans (-w/2) (-h/2) $ combConst (animationList g) (border w h) ) (1.5*x))
 
---      (\x -> anim ( trans (-w/2) (-h/2) $ combConst (  animationList g) (border w h) ) x)
-
+trans w h ani  = transformAnimations (translate w h) ani 
 
 border w h = translate (w/2) (h/2) $ color white $ lineLoop $ rectanglePath  w h
 s1 = 2
 s2 = 4
+spawn :: Int -> Int -> Float -> Picture
 spawn x y time = color (redish (time))  $
       translate (centerX x y) (centerY x y) (thickCircle s1 s2)
 kill x y  time = color (redish (1-time)) $ 
@@ -67,7 +67,7 @@ centerY a b = snd $ centerCoords a b
 
 ft :: Float
 ft = 1
---transf :: GridDelta -> [Animation]
+transf :: GridDelta -> [Animation]
 transf g = map tr $ filter kd (assocs g)
   where tr ((x,y), Kill)      = mkDynamic ft (kill  x y) 
         tr ((x,y), Spawn)     = mkDynamic ft (spawn x y)
