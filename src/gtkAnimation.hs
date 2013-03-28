@@ -1,4 +1,4 @@
-{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE NoMonomorphismRestriction, FlexibleInstances, TypeSynonymInstances#-}
 
 import Graphics.Rendering.Cairo
 
@@ -11,8 +11,14 @@ import Data.List (unlines, lines, intersperse, foldl')
 import Control.Monad (forM_, when, unless, liftM,mplus)
 import System.Environment (getArgs)
 import System.Mem
+import Data.Semigroup
+import GeneralAnimation
 
 type Universe = [Grid]
+
+type Animation = Dynamic Double (Render())
+instance Semigroup (Render ()) where
+    a <> b = a >> b
 
 cellSize = 10
 main :: IO ()
@@ -59,13 +65,13 @@ main= do
     mainGUI
 
 
-defaultSpeed = 100
+defaultSpeed = 50
 startAnimation drawin animation  = do
         timeRef <- newIORef (0)
         timerID <- timeoutAdd( do time <- readIORef timeRef
                                   drawWindowClear drawin
                                   renderWithDrawable drawin ((animation time) >> fill)
-                                  modifyIORef timeRef (+0.1)
+                                  modifyIORef timeRef (+0.25)
                                   return True ) ( defaultSpeed )
         return timerID
     
@@ -118,10 +124,10 @@ ft :: Double
 ft = 1
 transf :: GridDelta -> [Animation]
 transf g = map tr $ filter kd (assocs g)
-  where tr ((x,y), Kill)      = A (ft, kill  x y) 
-        tr ((x,y), Spawn)     = A (ft, spawn x y)
-        tr ((x,y), KeepDead)  = A (ft, keepDead x y)
-        tr ((x,y), KeepAlive) = A (ft, keepAlive x y)
+  where tr ((x,y), Kill)      = mkDynamic ft (kill  x y) 
+        tr ((x,y), Spawn)     = mkDynamic ft (spawn x y)
+        tr ((x,y), KeepDead)  = mkDynamic ft (keepDead x y)
+        tr ((x,y), KeepAlive) = mkDynamic ft (keepAlive x y)
         kd ((x,y), KeepDead) = False
         kd _ = True
 
@@ -130,46 +136,3 @@ transf g = map tr $ filter kd (assocs g)
 animationList gr = map (\g -> combAnim (transf g) ) (deltaGridList gr)
 -- Slower if animationList depends on grid?
 
-
-data Animation = A (Double, Double -> Picture)
-type Picture = Render ()
-instance Show Animation where
-  show (A (i, f)) = "A " ++ (show i) ++ "f" 
-
-combConst :: [Animation] -> Picture -> [Animation]
-combConst l pic = map tr l
-  where tr (A (t, f)) = A (t, combine [f, (\t -> pic)])
-
-funcFromAnimation (A (x, f)) = f
-timeFromAnimation (A (x, f)) = x
-
-transformAnimation :: (Picture -> Picture) -> Animation -> Animation
-transformAnimation tr an = A(x, \t -> tr (f t) )
-   where f = funcFromAnimation an 
-         x = timeFromAnimation an 
-
-transformAnimations :: (Picture -> Picture) -> [Animation] -> [Animation]
-transformAnimations tr an = map (transformAnimation tr) an
-
-anim :: [Animation] -> Double -> Picture
-anim l t  = a (t - start)
-  where ((start, end), a) = fromDur t l
-
-fromDur :: Double -> [Animation] -> ((Double, Double), Double -> Picture)
-fromDur t l = head $ filter (\((s,e), f) -> and [(s <= t),(t <= e)] ) (totalFromDur l)
-
-totalFromDur :: [Animation] -> [((Double, Double), Double -> Picture)]
-totalFromDur l = scanl calc ((0,s),abc) (tail l)
-    where A (s, abc) = head l
-          calc ( (startac, endac), fac) (A (ordur, for)) = ((endac, ordur + endac), for)
-
-
-combAnim :: [Animation] -> Animation
-combAnim l = A (m, combine l')
-  where m  = maximum $ map timeFromAnimation l
-        l' = map funcFromAnimation l 
-
-combine :: [(Double -> Picture)] -> Double -> Picture
-combine l t = foldl' (>>) (return ()) (map (\x -> x t) l)
-
- 
