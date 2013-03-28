@@ -123,7 +123,7 @@ keepDead x y t = return ()
 ft :: Double
 ft = 1
 transf :: GridDelta -> [Animation]
-transf g = map tr $ filter kd (assocs g)
+transf g = traverseFilter g tr kd 
   where tr ((x,y), Kill)      = mkDynamic ft (kill  x y) 
         tr ((x,y), Spawn)     = mkDynamic ft (spawn x y)
         tr ((x,y), KeepDead)  = mkDynamic ft (keepDead x y)
