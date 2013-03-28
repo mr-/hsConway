@@ -57,6 +57,8 @@ neighbours grid x y = arrayElements grid ns
           arrayElements grid indices = map (grid !) indices 
 
 
+traverseFilter g tr kd = map tr $ filter kd (assocs g)
+
 dim :: Grid -> (Int, Int)
 dim = snd.bounds
 
