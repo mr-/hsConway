@@ -42,38 +42,35 @@ main = do
 
 trans w h ani  = transformAnimations (translate w h) ani 
 
+
 border w h = translate (w/2) (h/2) $ color white $ lineLoop $ rectanglePath  w h
-s1 = 2
-s2 = 4
-spawn :: Int -> Int -> Float -> Picture
-spawn x y time = color (redish (time))  $
-      translate (centerX x y) (centerY x y) (thickCircle s1 s2)
-kill x y  time = color (redish (1-time)) $ 
-      translate (centerX x y) (centerY x y) (thickCircle s1 s2)
-keepAlive x y  time = color red $ 
-      translate (centerX x y) (centerY x y) (thickCircle s1 s2)
-keepDead x y time = blank
+
+spawn x y time      = color (redish (time))   $ tr' x y  cell
+kill x y  time      = color (redish (1-time)) $ tr' x y  cell
+keepAlive x y  time = color red               $ tr' x y  cell
+keepDead x y time   = blank
+
 redish t = makeColor (t) 0 0 1 
-
-
-centerCoords :: Int -> Int -> (Float,Float)
-centerCoords a b = ( fromIntegral nx,  fromIntegral ny )
+cell = thickCircle 2 4
+tr' x y = translate (centerX x y) (centerY x y)
+  where
+    centerX a b = fst $ centerCoords a b 
+    centerY a b = snd $ centerCoords a b 
+    centerCoords a b = ( fromIntegral nx,  fromIntegral ny )
         where nx = cellSize * a - div cellSize 2
               ny = cellSize * b - div cellSize 2
-
-centerX a b = fst $ centerCoords a b 
-centerY a b = snd $ centerCoords a b 
 
 ft :: Float
 ft = 1
 transf :: GridDelta -> [Animation]
 transf g = traverseFilter g tr kd 
-  where tr ((x,y), Kill)      = mkDynamic ft (kill  x y) 
-        tr ((x,y), Spawn)     = mkDynamic ft (spawn x y)
-        tr ((x,y), KeepDead)  = mkDynamic ft (keepDead x y)
-        tr ((x,y), KeepAlive) = mkDynamic ft (keepAlive x y)
+  where tr ((x,y), Kill)      = uh (kill  x y) 
+        tr ((x,y), Spawn)     = uh (spawn x y)
+        tr ((x,y), KeepDead)  = uh (keepDead x y)
+        tr ((x,y), KeepAlive) = uh (keepAlive x y)
         kd ((x,y), KeepDead) = False
         kd _ = True
+        uh x = mkDynamic ft x
 
 
 animationList gr = map (\g -> combAnim (transf g) ) (deltaGridList gr)
