@@ -1,34 +1,20 @@
-
-{-# LANGUAGE FlexibleInstances #-}
-
+{-# LANGUAGE DeriveFunctor
+           , GeneralizedNewtypeDeriving
+           , TypeSynonymInstances
+           , MultiParamTypeClasses
+           , TypeFamilies
+           , FlexibleInstances
+  #-}
+module GeneralAnimation where
 
 import Data.Semigroup
-
+import Data.List
 --Want newtype Animation = Dynamic Double Picture
+-- have Time and Duration seperate..
 
-data Time a = Forever | Duration a 
+--type Animation = Dynamic Double (Render ())
 
---add :: (Num a) => (Time a) -> (Time a) -> (Time a)
-add Forever _ = Forever
-add _ Forever = Forever
-add (Duration x) (Duration y) = x + y
-
-sub Forever _ = Forever
-sub _ Forever = 0
-sub (Duration x) (Duration y) = x - y
-
-instance (Eq a) => Eq (Time a) where
-    Forever == Forever       =  True
-    (Duration a) == (Duration b)  =  a == b
-    _ == _             =  False
-
-instance (Ord a) => Ord (Time a) where
-    compare _ Forever                 = LT
-    compare Forever _                 = GT
-    compare (Duration a) (Duration b) = compare a b
-
-
-data Dynamic t a = Dynamic {duration :: Time t, runDynamic :: (Time t -> a) }
+data Dynamic t a = Dynamic {duration :: t, runDynamic :: (t -> a) }
 
 instance (Semigroup a, Ord t) => Semigroup (Dynamic t a) where
     x <> y = Dynamic t (\t -> (fx t) <> (fy t))
@@ -36,42 +22,44 @@ instance (Semigroup a, Ord t) => Semigroup (Dynamic t a) where
               fx = runDynamic x
               fy = runDynamic y 
 
-combine :: (Semigroup a, Ord t) => [(Time t -> a)] -> Time t -> a
-combine   = foldl1 (<>) 
+mkDynamic :: t -> (t -> a) -> Dynamic t a
+mkDynamic = Dynamic 
 
-anim :: (Semigroup a, Ord t, Num t) => [Dynamic t a] -> Time t -> a
-anim l t  =  f (t `sub` s)
-  where ((s, e), f) = fromDur l t
-        fromDur l t = head $ filter (\((s,e), f) -> and [(s <= t),(t <= e)] ) (totalFromDur l)
-        totalFromDur l = scanl calc ((Duration 0, duration dy), runDynamic dy) l 
-            where dy = head l
-                  calc ( (startac, endac), fac) d = ((endac, (duration d) `add` endac), runDynamic d)
 
-{-
-combConst :: [Dynamic t a] -> a -> [Dynamic t a]
-combConst l pic = map tr l
-  where tr (A (t, f)) = A (t, combine [f, (\t -> pic)])
+combine :: (Semigroup a, Num t) => [(t -> a)] -> t -> a
+combine = foldl1 (<>) 
 
-funcFromAnimation (A (x, f)) = f
-timeFromAnimation (A (x, f)) = x
 
-transformAnimation :: (Picture -> Picture) -> Animation -> Animation
-transformAnimation tr an = A(x, \t -> tr (f t) )
-   where f = funcFromAnimation an 
-         x = timeFromAnimation an 
+anim :: (Semigroup a, Ord t, Num t) => [Dynamic t a] -> t -> a
+anim l t = (runDynamic func) t
+    where func = find' t startTimed 
+          startTimed = scanl1 addTimes l
+          addTimes a b = Dynamic ((duration a) + (duration b)) (runDynamic b)
+          find' t li = head $ dropWhile (\x -> ( duration x )<= t) li
 
-transformAnimations :: (Picture -> Picture) -> [Animation] -> [Animation]
+--combAnim :: [Animation] -> Animation
+combAnim l = Dynamic m (combine l')
+  where m  = maximum $ map duration l
+        l' = map runDynamic l 
+
+combConst :: (Semigroup a) => [Dynamic t a] -> a -> [Dynamic t a]
+combConst l pic = map (combConst1 pic) l
+
+combConst1 :: (Semigroup a) => a -> (Dynamic t a) -> (Dynamic t a)
+combConst1 pic d = Dynamic (duration d) f
+  where f = \t -> ((runDynamic d) t) <> pic
+
+-- would rather have pic to be a constant dynamic and just <> those..        
+
+
+funcFromDynamics  = runDynamic 
+timeFromDynamics  = duration 
+
+
+transformAnimation :: (a -> a) -> Dynamic t a -> Dynamic t a
+transformAnimation tr an = Dynamic (duration an) (\t -> tr ( (runDynamic an) t))
+
 transformAnimations tr an = map (transformAnimation tr) an
 
 
 
-
-
-
-combAnim :: [Animation] -> Animation
-combAnim l = A (m, combine l')
-  where m  = maximum $ map timeFromAnimation l
-        l' = map funcFromAnimation l 
-
-
--}
