@@ -29,7 +29,7 @@ mkDynamic = Dynamic
 combine :: (Semigroup a, Num t) => [(t -> a)] -> t -> a
 combine = foldl1 (<>) 
 
-
+--You are an ugly ugly hack..
 anim :: (Semigroup a, Ord t, Num t) => [Dynamic t a] -> t -> a
 anim l t = (runDynamic func) (t - (duration func) + stime)
     where func = find' t startTimed 
