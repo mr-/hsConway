@@ -31,7 +31,7 @@ main= do
     startButton <- buttonNewWithLabel "Start"
     pauseButton <- buttonNewWithLabel "Pause"
     mFilename <- maybeFirstArg
-    let defaultfilename = Just "../universes/line.conway"
+    let defaultfilename = Just "../../universes/line.conway"
     g <- gliderFromFile (fromJust $ mplus mFilename defaultfilename)
     let (width, height) = dim g
         w = fromIntegral $ cellSize*width
