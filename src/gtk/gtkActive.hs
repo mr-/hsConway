@@ -80,8 +80,6 @@ startAnimation drawin animation  = do
         return timerID
     
 
-
-
 maybeFirstArg = do list <- getArgs 
                    let z = bang list 
                    return z
@@ -122,8 +120,6 @@ keepAlive x y t = do
 keepDead x y t = return ()
 
 
-
-
 --ft :: Double
 ft = 1
 z = toTime 0
@@ -141,47 +137,3 @@ transf g = map tr $ filter kd (assocs g)
 --animationList ::  [Animation]
 animationList gr = 
   map (\g -> foldl (<>) (mkActive 0 0 (\t -> return ())) (transf g) ) (deltaGridList gr)
--- Slower if animationList depends on grid?
-
-{-
-data Animation = A (Double, Double -> Picture)
-type Picture = Render ()
-instance Show Animation where
-  show (A (i, f)) = "A " ++ (show i) ++ "f" 
-
-combConst :: [Animation] -> Picture -> [Animation]
-combConst l pic = map tr l
-  where tr (A (t, f)) = A (t, combine [f, (\t -> pic)])
-
-funcFromAnimation (A (x, f)) = f
-timeFromAnimation (A (x, f)) = x
-
-transformAnimation :: (Picture -> Picture) -> Animation -> Animation
-transformAnimation tr an = A(x, \t -> tr (f t) )
-   where f = funcFromAnimation an 
-         x = timeFromAnimation an 
-
-transformAnimations :: (Picture -> Picture) -> [Animation] -> [Animation]
-transformAnimations tr an = map (transformAnimation tr) an
-
-anim :: [Animation] -> Double -> Picture
-anim l t  = a (t - start)
-  where ((start, end), a) = fromDur t l
-
-fromDur :: Double -> [Animation] -> ((Double, Double), Double -> Picture)
-fromDur t l = head $ filter (\((s,e), f) -> and [(s <= t),(t <= e)] ) (totalFromDur l)
-
-totalFromDur :: [Animation] -> [((Double, Double), Double -> Picture)]
-totalFromDur l = scanl calc ((0,s),abc) (tail l)
-    where A (s, abc) = head l
-          calc ( (startac, endac), fac) (A (ordur, for)) = ((endac, ordur + endac), for)
-
-
-combAnim :: [Animation] -> Animation
-combAnim l = A (m, combine l')
-  where m  = maximum $ map timeFromAnimation l
-        l' = map funcFromAnimation l 
-
-combine :: [(Double -> Picture)] -> Double -> Picture
-combine l t = foldl' (>>) (return ()) (map (\x -> x t) l)
--}
